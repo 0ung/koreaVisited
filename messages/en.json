@@ -40,6 +40,121 @@
         "startExploring": "Start Exploring",
         "travelGuide": "Travel Guide"
     },
+    "Categories": {
+        "title": "Explore by Category",
+        "description": "Find the perfect places for your travel purpose",
+        "searchPlaceholder": "Search categories...",
+        "noResults": "No results found",
+        "noResultsDescription": "Try searching with different keywords",
+        "clearSearch": "View all categories",
+        "exploreMore": "Need more detailed search?",
+        "exploreDescription": "Use filters and sorting options to find the perfect place",
+        "detailSearch": "Advanced Search",
+        "backToHome": "Back to Home",
+        "places": "places",
+        "popularPlaces": "Popular places",
+        "explore": "Explore"
+    },
+    "Bookmarks": {
+        "title": "My Bookmarks",
+        "description": "Manage your saved places and plan your trips",
+        "createFolder": "Create Folder",
+        "findNewPlaces": "Find New Places",
+        "searchPlaceholder": "Search bookmarked places...",
+        "sortBy": {
+            "recent": "Most Recent",
+            "name": "Name",
+            "rating": "Rating"
+        },
+        "folders": {
+            "all": "All",
+            "name": "Folder Name",
+            "color": "Folder Color",
+            "create": "Create New Folder",
+            "namePlaceholder": "e.g. Seoul Trip, Busan Food...",
+            "cancel": "Cancel",
+            "save": "Create"
+        },
+        "actions": {
+            "toggleVisited": "Toggle visited status",
+            "removeBookmark": "Remove bookmark",
+            "visited": "Visited",
+            "note": "Note"
+        },
+        "empty": {
+            "title": "No bookmarks yet",
+            "description": "Save places you like to your bookmarks",
+            "searchTitle": "No search results",
+            "searchDescription": "Try searching with different keywords",
+            "findPlaces": "Find Places",
+            "browseCategories": "Browse Categories",
+            "viewAllBookmarks": "View All Bookmarks"
+        },
+        "stats": {
+            "bookmarksCount": "bookmarks",
+            "visitedCount": "visited",
+            "savedAt": "saved"
+        }
+    },
+    "Profile": {
+        "title": "Profile",
+        "editProfile": "Edit Profile",
+        "changePassword": "Change Password",
+        "joined": "joined",
+        "bio": "Bio",
+        "location": "Location",
+        "stats": {
+            "bookmarks": "Bookmarks",
+            "visited": "Visited",
+            "reviews": "Reviews",
+            "tripDays": "Trip Days"
+        },
+        "edit": {
+            "title": "Edit Profile",
+            "nickname": "Nickname",
+            "nicknamePlaceholder": "Enter your nickname",
+            "bioLabel": "Bio",
+            "bioPlaceholder": "Tell us about yourself",
+            "location": "Location",
+            "locationPlaceholder": "Enter your location",
+            "preferredLanguage": "Preferred Language",
+            "save": "Save",
+            "cancel": "Cancel"
+        },
+        "password": {
+            "title": "Change Password",
+            "current": "Current Password",
+            "currentPlaceholder": "Enter current password",
+            "new": "New Password",
+            "newPlaceholder": "Enter new password",
+            "confirm": "Confirm New Password",
+            "confirmPlaceholder": "Re-enter new password",
+            "change": "Change",
+            "cancel": "Cancel"
+        },
+        "activity": {
+            "title": "Recent Activity",
+            "bookmark": "added to bookmarks",
+            "visit": "marked as visited",
+            "review": "wrote a review",
+            "plan": "added to travel plan",
+            "viewAll": "View All Activity"
+        },
+        "quickActions": {
+            "title": "Quick Actions",
+            "myBookmarks": "My Bookmarks",
+            "findPlaces": "Find New Places",
+            "browseCategories": "Browse Categories"
+        },
+        "empty": {
+            "bioPlaceholder": "No bio written yet."
+        },
+        "errors": {
+            "loadFailed": "Failed to load profile",
+            "loadDescription": "Please try again later",
+            "retry": "Try Again"
+        }
+    },
     "Search": {
         "title": "Search",
         "placeholder": "Search places, restaurants, attractions...",

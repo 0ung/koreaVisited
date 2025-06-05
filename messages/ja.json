@@ -52,6 +52,121 @@
         "startExploring": "探検を始める",
         "travelGuide": "旅行ガイド"
     },
+    "Categories": {
+        "title": "カテゴリ別探索",
+        "description": "旅行目的に合った完璧な場所を見つけましょう",
+        "searchPlaceholder": "カテゴリ検索...",
+        "noResults": "検索結果がありません",
+        "noResultsDescription": "他のキーワードで検索してみてください",
+        "clearSearch": "全カテゴリを表示",
+        "exploreMore": "より詳細な検索が必要ですか？",
+        "exploreDescription": "フィルターとソートオプションを活用して完璧な場所を見つけましょう",
+        "detailSearch": "詳細検索",
+        "backToHome": "ホームに戻る",
+        "places": "箇所",
+        "popularPlaces": "人気の場所",
+        "explore": "探索"
+    },
+    "Bookmarks": {
+        "title": "マイブックマーク",
+        "description": "保存した場所を管理し、旅行計画を立てましょう",
+        "createFolder": "フォルダ作成",
+        "findNewPlaces": "新しい場所を探す",
+        "searchPlaceholder": "ブックマークした場所を検索...",
+        "sortBy": {
+            "recent": "最新順",
+            "name": "名前順",
+            "rating": "評価順"
+        },
+        "folders": {
+            "all": "全て",
+            "name": "フォルダ名",
+            "color": "フォルダ色",
+            "create": "新しいフォルダを作成",
+            "namePlaceholder": "例：ソウル旅行、釜山グルメ...",
+            "cancel": "キャンセル",
+            "save": "作成"
+        },
+        "actions": {
+            "toggleVisited": "訪問状態を変更",
+            "removeBookmark": "ブックマークを削除",
+            "visited": "訪問済み",
+            "note": "メモ"
+        },
+        "empty": {
+            "title": "まだブックマークがありません",
+            "description": "気に入った場所をブックマークに保存してみましょう",
+            "searchTitle": "検索結果がありません",
+            "searchDescription": "他のキーワードで検索してみてください",
+            "findPlaces": "場所を探す",
+            "browseCategories": "カテゴリを見る",
+            "viewAllBookmarks": "全ブックマークを表示"
+        },
+        "stats": {
+            "bookmarksCount": "ブックマーク",
+            "visitedCount": "訪問済み",
+            "savedAt": "保存"
+        }
+    },
+    "Profile": {
+        "title": "プロフィール",
+        "editProfile": "プロフィール編集",
+        "changePassword": "パスワード変更",
+        "joined": "登録",
+        "bio": "自己紹介",
+        "location": "所在地",
+        "stats": {
+            "bookmarks": "ブックマーク",
+            "visited": "訪問済み",
+            "reviews": "レビュー",
+            "tripDays": "旅行日数"
+        },
+        "edit": {
+            "title": "プロフィール編集",
+            "nickname": "ニックネーム",
+            "nicknamePlaceholder": "ニックネームを入力",
+            "bioLabel": "自己紹介",
+            "bioPlaceholder": "自己紹介を入力してください",
+            "location": "所在地",
+            "locationPlaceholder": "所在地を入力してください",
+            "preferredLanguage": "言語設定",
+            "save": "保存",
+            "cancel": "キャンセル"
+        },
+        "password": {
+            "title": "パスワード変更",
+            "current": "現在のパスワード",
+            "currentPlaceholder": "現在のパスワードを入力",
+            "new": "新しいパスワード",
+            "newPlaceholder": "新しいパスワードを入力",
+            "confirm": "新しいパスワード確認",
+            "confirmPlaceholder": "新しいパスワードを再入力",
+            "change": "変更",
+            "cancel": "キャンセル"
+        },
+        "activity": {
+            "title": "最近のアクティビティ",
+            "bookmark": "ブックマークに追加しました",
+            "visit": "訪問済みにしました",
+            "review": "レビューを書きました",
+            "plan": "旅行計画に追加しました",
+            "viewAll": "全アクティビティを表示"
+        },
+        "quickActions": {
+            "title": "クイックアクション",
+            "myBookmarks": "マイブックマーク",
+            "findPlaces": "新しい場所を探す",
+            "browseCategories": "カテゴリを見る"
+        },
+        "empty": {
+            "bioPlaceholder": "まだ自己紹介が書かれていません。"
+        },
+        "errors": {
+            "loadFailed": "プロフィールを読み込めません",
+            "loadDescription": "しばらくしてから再試行してください",
+            "retry": "再試行"
+        }
+    },
     "Search": {
         "title": "検索",
         "placeholder": "場所、レストラン、観光地を検索...",

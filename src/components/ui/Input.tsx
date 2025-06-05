@@ -1,5 +1,5 @@
 // components/ui/Input.tsx
-import React, { forwardRef, useState } from "react";
+import React, { forwardRef, useState, useId } from "react";
 import { cn } from "@/utils/cn";
 
 export interface InputProps
@@ -31,10 +31,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const [showPassword, setShowPassword] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
 
-    const inputType = showPasswordToggle && showPassword ? "text" : type;
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    // useId를 사용해서 SSR-safe한 ID 생성
+    const generatedId = useId();
+    const inputId = id || generatedId;
     const errorId = error ? `${inputId}-error` : undefined;
     const helperTextId = helperText ? `${inputId}-helper` : undefined;
+
+    const inputType = showPasswordToggle && showPassword ? "text" : type;
 
     const inputClasses = cn(
       "flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition-all duration-200",
