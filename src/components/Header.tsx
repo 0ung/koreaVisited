@@ -6,13 +6,10 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { cn } from "@/utils/cn";
-
-// 기존 UI 컴포넌트들 활용
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { User } from "./UserMenu";
 
 // 동적 임포트로 코드 스플리팅
 const LanguageSwitcher = dynamic(() => import("./LanguageSwitcher"), {
@@ -37,72 +34,32 @@ interface NavItem {
   badge?: number;
   requiresAuth?: boolean;
   showOnMobile?: boolean;
+  isAdminOnly?: boolean;
 }
 
-interface UserType {
+interface User {
+  id: string;
   name: string;
   email: string;
+  avatar?: string;
+  role?: string;
 }
 
 // 향상된 검색바 컴포넌트
 const SearchBar: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
+  const t = useTranslations("Header");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const t = useTranslations("Search");
 
-  // 최근 검색어 로드
-  useEffect(() => {
-    const saved = localStorage.getItem("recentSearches");
-    if (saved) {
-      setRecentSearches(JSON.parse(saved));
-    }
-  }, []);
-
-  // 검색 제안 (디바운스)
-  useEffect(() => {
-    if (searchQuery.length > 1) {
-      const timer = setTimeout(() => {
-        // 실제로는 API 호출
-        const mockSuggestions = [
-          "서울 맛집",
-          "부산 카페",
-          "제주도 관광",
-          "강남 술집",
-          "홍대 클럽",
-        ].filter((item) =>
-          item.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setSuggestions(mockSuggestions);
-      }, 300);
-
-      return () => clearTimeout(timer);
-    } else {
-      setSuggestions([]);
-    }
-  }, [searchQuery]);
-
-  const handleSearch = (query: string = searchQuery) => {
-    if (query.trim()) {
-      // 최근 검색어에 추가
-      const newRecent = [
-        query,
-        ...recentSearches.filter((item) => item !== query),
-      ].slice(0, 10);
-      setRecentSearches(newRecent);
-      localStorage.setItem("recentSearches", JSON.stringify(newRecent));
-
-      // 검색 실행
-      console.log("검색:", query);
-      setIsSearchModalOpen(false);
-      setSearchQuery("");
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
     }
   };
 
   const searchIcon = (
     <svg
-      className="w-5 h-5"
+      className="w-5 h-5 text-gray-400"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -124,7 +81,7 @@ const SearchBar: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
           size="icon"
           onClick={() => setIsSearchModalOpen(true)}
           className="h-10 w-10"
-          aria-label={t("openSearch")}
+          aria-label={t("search")}
         >
           {searchIcon}
         </Button>
@@ -132,127 +89,32 @@ const SearchBar: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
         <Modal
           isOpen={isSearchModalOpen}
           onClose={() => setIsSearchModalOpen(false)}
-          title={t("searchTitle")}
+          title={t("search")}
           size="full"
-          className="h-full"
         >
-          <div className="flex flex-col h-full">
-            {/* 검색 입력 */}
-            <div className="sticky top-0 bg-white z-10 pb-4 border-b">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSearch();
-                }}
+          <div className="space-y-4">
+            <Input
+              type="text"
+              placeholder={t("searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              leftIcon={searchIcon}
+              autoFocus
+            />
+            <div className="flex space-x-3">
+              <Button
+                onClick={handleSearch}
+                disabled={!searchQuery.trim()}
+                className="flex-1"
               >
-                <Input
-                  type="text"
-                  placeholder={t("placeholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  leftIcon={searchIcon}
-                  autoFocus
-                  className="text-base"
-                />
-              </form>
-            </div>
-
-            {/* 검색 내용 */}
-            <div className="flex-1 overflow-y-auto py-4">
-              {/* 최근 검색어 */}
-              {recentSearches.length > 0 && !searchQuery && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                    {t("recentSearches")}
-                  </h3>
-                  <div className="space-y-2">
-                    {recentSearches.map((item, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSearch(item)}
-                        className="flex items-center w-full p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        <svg
-                          className="w-4 h-4 text-gray-400 mr-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <span className="text-gray-700">{item}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 검색 제안 */}
-              {suggestions.length > 0 && searchQuery && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                    {t("suggestions")}
-                  </h3>
-                  <div className="space-y-2">
-                    {suggestions.map((item, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSearch(item)}
-                        className="flex items-center w-full p-3 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        {searchIcon}
-                        <span className="text-gray-700 ml-3">{item}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 인기 검색어 */}
-              {!searchQuery && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                    {t("popularSearches")}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {["서울 맛집", "부산 여행", "제주도", "카페", "호텔"].map(
-                      (item, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleSearch(item)}
-                          className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
-                        >
-                          {item}
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 하단 버튼 */}
-            <div className="sticky bottom-0 bg-white pt-4 border-t">
-              <div className="flex space-x-3">
-                <Button
-                  onClick={() => handleSearch()}
-                  disabled={!searchQuery.trim()}
-                  className="flex-1"
-                >
-                  {t("search")}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsSearchModalOpen(false)}
-                >
-                  {t("cancel")}
-                </Button>
-              </div>
+                {t("search")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsSearchModalOpen(false)}
+              >
+                {t("cancel")}
+              </Button>
             </div>
           </div>
         </Modal>
@@ -260,7 +122,6 @@ const SearchBar: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
     );
   }
 
-  // 데스크톱 검색바
   return (
     <form
       onSubmit={(e) => {
@@ -271,7 +132,7 @@ const SearchBar: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
     >
       <Input
         type="text"
-        placeholder={t("placeholder")}
+        placeholder={t("searchPlaceholder")}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         leftIcon={searchIcon}
@@ -281,20 +142,21 @@ const SearchBar: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   );
 };
 
-// 임시 인증 컨텍스트
+// 임시 인증 컨텍스트 (실제로는 AuthContext 사용)
 const useAuth = () => {
-  const [user, setUser] = useState<User>({
+  const [user] = useState<User | null>({
     id: "123",
-    name: "123",
-    email: "123",
+    name: "여행러버",
+    email: "user@example.com",
+    role: "user", // admin | user
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated] = useState(false); // 실제로는 true/false 토글
 
   return { user, isAuthenticated };
 };
 
 export default function Header() {
-  const t = useTranslations("Navigation");
+  const t = useTranslations("Header");
   const pathname = usePathname();
   const { user, isAuthenticated } = useAuth();
 
@@ -352,7 +214,7 @@ export default function Header() {
     };
   }, [isMenuOpen]);
 
-  // 네비게이션 아이템 정의
+  // 네비게이션 아이템 정의 (새 페이지들 추가)
   const navItems: NavItem[] = useMemo(
     () => [
       {
@@ -393,7 +255,7 @@ export default function Header() {
             />
           </svg>
         ),
-        showOnMobile: false, // 검색은 별도 버튼으로
+        showOnMobile: false,
       },
       {
         href: "/categories",
@@ -409,7 +271,7 @@ export default function Header() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M19 11H5m14-7l-7 7-7-7m14 18l-7-7-7 7"
+              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
             />
           </svg>
         ),
@@ -435,10 +297,11 @@ export default function Header() {
         ),
         requiresAuth: true,
         showOnMobile: true,
+        badge: 3, // 예시 배지
       },
       {
-        href: "/trips",
-        labelKey: "myTrips",
+        href: "/profile",
+        labelKey: "profile",
         icon: (
           <svg
             className="w-5 h-5"
@@ -450,17 +313,87 @@ export default function Header() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
             />
           </svg>
         ),
         requiresAuth: true,
         showOnMobile: true,
       },
+      {
+        href: "/help",
+        labelKey: "help",
+        icon: (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        ),
+        showOnMobile: true,
+      },
+      {
+        href: "/settings",
+        labelKey: "settings",
+        icon: (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+        ),
+        requiresAuth: true,
+        showOnMobile: true,
+      },
+      {
+        href: "/admin/dashboard",
+        labelKey: "adminDashboard",
+        icon: (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+        ),
+        requiresAuth: true,
+        isAdminOnly: true,
+        showOnMobile: true,
+      },
     ],
     []
   );
 
+  // 현재 경로 확인
   const isCurrentPath = useCallback(
     (href: string) => {
       if (href === "/") {
@@ -471,16 +404,33 @@ export default function Header() {
     [pathname]
   );
 
-  const visibleNavItems = useMemo(
-    () => navItems.filter((item) => !item.requiresAuth || isAuthenticated),
-    [navItems, isAuthenticated]
-  );
+  // 표시할 네비게이션 아이템 필터링
+  const visibleNavItems = useMemo(() => {
+    return navItems.filter((item) => {
+      // 인증이 필요한 아이템
+      if (item.requiresAuth && !isAuthenticated) {
+        return false;
+      }
+
+      // 관리자 전용 아이템
+      if (item.isAdminOnly && (!user || user.role !== "admin")) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [navItems, isAuthenticated, user]);
+
+  // 모바일에서 표시할 아이템들
+  const mobileNavItems = useMemo(() => {
+    return visibleNavItems.filter((item) => item.showOnMobile);
+  }, [visibleNavItems]);
 
   return (
     <>
       <header
         className={cn(
-          "sticky top-0 z-50 bg-white transition-all duration-300",
+          "sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md transition-all duration-200",
           isScrolled
             ? "shadow-lg border-b border-gray-200"
             : "shadow-sm border-b border-gray-100"
@@ -512,7 +462,7 @@ export default function Header() {
 
             {/* 데스크톱 네비게이션 */}
             <div className="hidden lg:flex items-center space-x-1">
-              {visibleNavItems.map((item) => (
+              {visibleNavItems.slice(0, 6).map((item) => (
                 <Button
                   key={item.href}
                   variant={isCurrentPath(item.href) ? "secondary" : "ghost"}
@@ -564,7 +514,7 @@ export default function Header() {
                   <Button variant="ghost" size="sm" asChild>
                     <Link href="/login">{t("login")}</Link>
                   </Button>
-                  <Button variant="gradient" size="sm" asChild>
+                  <Button variant="default" size="sm" asChild>
                     <Link href="/signup">{t("signup")}</Link>
                   </Button>
                 </div>
@@ -628,7 +578,7 @@ export default function Header() {
           >
             <div className="flex flex-col h-full">
               {/* 헤더 */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between p-4 border-b">
                 <div className="flex items-center space-x-2">
                   <svg
                     className="w-6 h-6 text-blue-600"
@@ -637,16 +587,11 @@ export default function Header() {
                   >
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                   </svg>
-                  <span className="font-bold text-gray-900">TravelKorea</span>
+                  <span className="font-bold text-lg">TravelKorea</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={closeMenu}
-                  className="h-8 w-8"
-                >
+                <Button variant="ghost" size="icon" onClick={closeMenu}>
                   <svg
-                    className="w-5 h-5"
+                    className="w-6 h-6"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -661,56 +606,35 @@ export default function Header() {
                 </Button>
               </div>
 
-              {/* 사용자 정보 (로그인시) */}
-              {isAuthenticated && user && (
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center text-white font-medium">
-                      {user.name?.charAt(0).toUpperCase() || "U"}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {user.name || "사용자"}
-                      </p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 메뉴 아이템들 */}
-              <div className="flex-1 overflow-y-auto py-4">
+              {/* 네비게이션 링크들 */}
+              <div className="flex-1 py-4 overflow-y-auto">
                 <div className="space-y-1 px-4">
-                  {visibleNavItems
-                    .filter((item) => item.showOnMobile !== false)
-                    .map((item) => (
-                      <Button
-                        key={item.href}
-                        variant={
-                          isCurrentPath(item.href) ? "secondary" : "ghost"
+                  {mobileNavItems.map((item) => (
+                    <Button
+                      key={item.href}
+                      variant={isCurrentPath(item.href) ? "secondary" : "ghost"}
+                      size="lg"
+                      asChild
+                      className="w-full justify-start h-12"
+                    >
+                      <Link
+                        href={item.href}
+                        onClick={closeMenu}
+                        className="flex items-center space-x-3"
+                        aria-current={
+                          isCurrentPath(item.href) ? "page" : undefined
                         }
-                        size="lg"
-                        asChild
-                        className="w-full justify-start h-12"
                       >
-                        <Link
-                          href={item.href}
-                          onClick={closeMenu}
-                          className="flex items-center space-x-3"
-                          aria-current={
-                            isCurrentPath(item.href) ? "page" : undefined
-                          }
-                        >
-                          {item.icon}
-                          <span className="text-base">{t(item.labelKey)}</span>
-                          {item.badge && item.badge > 0 && (
-                            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 ml-auto">
-                              {item.badge > 99 ? "99+" : item.badge}
-                            </span>
-                          )}
-                        </Link>
-                      </Button>
-                    ))}
+                        {item.icon}
+                        <span className="text-base">{t(item.labelKey)}</span>
+                        {item.badge && item.badge > 0 && (
+                          <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 ml-auto">
+                            {item.badge > 99 ? "99+" : item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    </Button>
+                  ))}
                 </div>
 
                 {/* 추가 메뉴들 */}
@@ -725,110 +649,33 @@ export default function Header() {
                       <LanguageSwitcher />
                     </div>
 
-                    {/* 기타 링크들 */}
-                    <div className="space-y-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                        className="w-full justify-start"
-                      >
-                        <Link href="/help" onClick={closeMenu}>
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          도움말
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        asChild
-                        className="w-full justify-start"
-                      >
-                        <Link href="/contact" onClick={closeMenu}>
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                            />
-                          </svg>
-                          문의하기
-                        </Link>
-                      </Button>
-                    </div>
+                    {/* 로그인/로그아웃 버튼 */}
+                    {!isAuthenticated && (
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          asChild
+                          className="w-full"
+                        >
+                          <Link href="/login" onClick={closeMenu}>
+                            {t("login")}
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="lg"
+                          asChild
+                          className="w-full"
+                        >
+                          <Link href="/signup" onClick={closeMenu}>
+                            {t("signup")}
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* 하단 액션 버튼 */}
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
-                {!isAuthenticated ? (
-                  <div className="space-y-3">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      asChild
-                      className="w-full"
-                    >
-                      <Link href="/login" onClick={closeMenu}>
-                        {t("login")}
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="gradient"
-                      size="lg"
-                      asChild
-                      className="w-full"
-                    >
-                      <Link href="/signup" onClick={closeMenu}>
-                        {t("signup")}
-                      </Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => {
-                      // 로그아웃 로직
-                      closeMenu();
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                      />
-                    </svg>
-                    {t("logout") || "로그아웃"}
-                  </Button>
-                )}
               </div>
             </div>
           </div>

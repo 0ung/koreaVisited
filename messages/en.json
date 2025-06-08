@@ -491,16 +491,6 @@
         "viewAll": "View All Notifications",
         "openNotifications": "Open notifications"
     },
-    "Header": {
-        "searchPlaceholder": "Search places, restaurants...",
-        "categories": "Categories",
-        "recommendations": "Recommendations",
-        "bookmarks": "Bookmarks",
-        "login": "Login",
-        "signup": "Sign Up",
-        "profile": "Profile",
-        "logout": "Logout"
-    },
     "Common": {
         "loading": "Loading...",
         "error": "An error occurred",
@@ -537,16 +527,52 @@
         "new": "New",
         "featured": "Featured"
     },
+    "Header": {
+        "home": "Home",
+        "search": "Search",
+        "categories": "Categories",
+        "bookmarks": "Bookmarks",
+        "profile": "Profile",
+        "help": "Help",
+        "settings": "Settings",
+        "adminDashboard": "Admin",
+        "login": "Sign In",
+        "signup": "Sign Up",
+        "homeLink": "Go to homepage",
+        "toggleMenu": "Toggle navigation menu",
+        "searchPlaceholder": "Search places, restaurants...",
+        "cancel": "Cancel"
+    },
     "Footer": {
         "description": "AI-powered Korea travel guide",
         "explore": "Explore",
         "search": "Search",
         "categories": "Categories",
+        "popular": "Popular",
+        "recommendations": "Recommendations",
         "support": "Support",
         "help": "Help",
         "contact": "Contact",
-        "terms": "Terms",
-        "privacy": "Privacy",
-        "allRightsReserved": "All rights reserved."
+        "feedback": "Feedback",
+        "apiDocs": "API Docs",
+        "account": "Account",
+        "login": "Sign In",
+        "signup": "Sign Up",
+        "profile": "Profile",
+        "bookmarks": "Bookmarks",
+        "legal": "Legal",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy",
+        "cookies": "Cookie Policy",
+        "accessibility": "Accessibility",
+        "newsletter": "Newsletter",
+        "newsletterDescription": "Get the latest travel updates and special offers",
+        "emailPlaceholder": "Enter your email",
+        "subscribe": "Subscribe",
+        "allRightsReserved": "All rights reserved.",
+        "adminPanel": "Admin Panel",
+        "developedWith": "Made with",
+        "inKorea": "in Korea",
+        "poweredBy": "Powered by"
     }
 }
