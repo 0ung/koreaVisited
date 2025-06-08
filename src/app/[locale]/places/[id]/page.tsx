@@ -9,13 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/utils/cn";
-import { formatRelativeTime, formatDistance } from "@/utils/formatting";
 import { storage } from "@/utils/storage";
 import ImageGallery from "@/components/ImageGallery";
 import CrowdGauge from "@/components/CrowdGauge";
 import UGCTips from "@/components/UGCTips";
 
-// 타입 정의
+// 타입 정의 (ETL 통합 데이터 구조)
 interface PlaceDetail {
   id: string;
   name: {
@@ -33,27 +32,64 @@ interface PlaceDetail {
   tel: string;
   opening_hours: string;
   category_std: string;
-  rating_avg: number;
-  review_count: number;
+  rating_avg: number; // 통합 평점
+  review_count: number; // 통합 리뷰 수
   main_image_urls: string[];
-  recommendation_score: number;
+  recommendation_score: number; // 데이터 기반 점수
   crowd_index: number;
   last_updated: string;
   website?: string;
   price_level?: number;
   features: string[];
-  ai_recommendations: {
-    recommendation_phrase: string;
-    weather_tips?: string;
-    time_tips?: string;
-    crowd_tips?: string;
+
+  // 플랫폼별 원본 데이터
+  platform_data: {
+    kakao?: {
+      rating: number;
+      review_count: number;
+      available: boolean;
+      last_updated: string;
+      images: string[];
+    };
+    naver?: {
+      rating: number;
+      review_count: number;
+      available: boolean;
+      last_updated: string;
+      images: string[];
+    };
+    google?: {
+      rating: number;
+      review_count: number;
+      available: boolean;
+      last_updated: string;
+      images: string[];
+    };
   };
+
+  // 단순 추천 문구 (AI 대신 템플릿 기반)
+  data_summary: {
+    best_features: string[]; // 가장 많이 언급된 특징
+    visit_tips: string; // 간단한 방문 팁
+    best_time: string; // 최적 방문 시간
+  };
+
+  // UGC 분석 데이터 (AI 최소)
   ugc_tips: UGCTip[];
+
+  // 데이터 품질 정보
+  data_quality: {
+    completeness_score: number; // 데이터 완성도 (0-100)
+    platform_consistency: number; // 플랫폼 간 일치도
+    freshness_score: number; // 최신성 점수
+  };
 }
 
 interface UGCTip {
   id: string;
-  tip_summary: string;
+  tip_summary_ko: string;
+  tip_summary_en: string;
+  tip_summary_ja: string;
   sentiment_score: number;
   tags: string[];
   images: string[];
@@ -85,6 +121,9 @@ export default function PlaceDetailPage() {
   const [selectedMapProvider, setSelectedMapProvider] =
     useState<MapProvider["id"]>("kakao");
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [activeDataView, setActiveDataView] = useState<"summary" | "platform">(
+    "summary"
+  );
 
   // 지도 제공업체 설정
   const mapProviders: MapProvider[] = [
@@ -109,10 +148,10 @@ export default function PlaceDetailPage() {
       setError(null);
 
       try {
-        // 실제로는 API 호출: /api/places/${placeId}?locale=${locale}
+        // 실제 API: /api/places/${placeId}?locale=${locale}
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // 목업 데이터
+        // 목업 데이터 (ETL 통합 구조)
         const mockPlace: PlaceDetail = {
           id: placeId,
           name: {
@@ -129,16 +168,16 @@ export default function PlaceDetailPage() {
           lon: 129.0092,
           tel: "051-204-1444",
           opening_hours: "09:00-18:00",
-          category_std: "attractions",
-          rating_avg: 4.5,
-          review_count: 2847,
+          category_std: "tourist",
+          rating_avg: 4.3, // 3개 플랫폼 가중평균
+          review_count: 4892, // 통합 리뷰 수
           main_image_urls: [
             "/images/gamcheon-1.jpg",
             "/images/gamcheon-2.jpg",
             "/images/gamcheon-3.jpg",
             "/images/gamcheon-4.jpg",
           ],
-          recommendation_score: 9.2,
+          recommendation_score: 8.6, // 데이터 기반 점수
           crowd_index: 65,
           last_updated: new Date().toISOString(),
           website: "http://www.gamcheon.or.kr",
@@ -151,26 +190,55 @@ export default function PlaceDetailPage() {
             "기념품샵",
             "전망대",
           ],
-          ai_recommendations: {
-            recommendation_phrase:
-              locale === "ko"
-                ? "오늘 같은 맑은 날씨에는 골목골목 숨어있는 예술작품을 찾아보세요. 특히 오후 4시경 석양이 질 때 마을 전체가 황금빛으로 물들어 환상적인 사진을 남길 수 있어요."
-                : locale === "en"
-                ? "On a clear day like today, explore the hidden artworks in every alley. The entire village turns golden during sunset around 4 PM, perfect for amazing photos."
-                : "今日のような晴れた日は、路地裏に隠れている芸術作品を探してみてください。特に午後4時頃の夕日の時間には、村全体が黄金色に染まって幻想的な写真が撮れます。",
-            weather_tips: "우천시에는 계단이 미끄러우니 주의하세요",
-            time_tips: "오전 10시-오후 4시 사이가 가장 좋은 조명입니다",
-            crowd_tips: "주말 오전이 가장 한적합니다",
+
+          // 플랫폼별 원본 데이터
+          platform_data: {
+            kakao: {
+              rating: 4.2,
+              review_count: 1523,
+              available: true,
+              last_updated: "2024-03-15T10:00:00Z",
+              images: ["/images/kakao-1.jpg", "/images/kakao-2.jpg"],
+            },
+            naver: {
+              rating: 4.4,
+              review_count: 2011,
+              available: true,
+              last_updated: "2024-03-14T15:30:00Z",
+              images: [
+                "/images/naver-1.jpg",
+                "/images/naver-2.jpg",
+                "/images/naver-3.jpg",
+              ],
+            },
+            google: {
+              rating: 4.3,
+              review_count: 1358,
+              available: true,
+              last_updated: "2024-03-16T09:20:00Z",
+              images: ["/images/google-1.jpg"],
+            },
           },
+
+          // 단순 데이터 요약 (AI 대신)
+          data_summary: {
+            best_features: ["포토존", "예술작품", "전망"],
+            visit_tips:
+              "편한 신발 착용 권장, 계단이 많음. 입구에서 지도 필수 수령.",
+            best_time: "오전 10시-오후 4시 (조명 최적, 상대적 한적)",
+          },
+
           ugc_tips: [
             {
               id: "1",
-              tip_summary:
-                locale === "ko"
-                  ? "입구에서 지도를 꼭 받으세요! 숨은 포토존이 정말 많아요. 특히 어린왕자 조형물 근처가 인생샷 명소입니다."
-                  : "Make sure to get a map at the entrance! There are so many hidden photo spots. The Little Prince sculpture area is perfect for photos.",
+              tip_summary_ko:
+                "입구에서 지도를 꼭 받으세요! 숨은 포토존이 정말 많아요.",
+              tip_summary_en:
+                "Make sure to get a map at the entrance! There are many hidden photo spots.",
+              tip_summary_ja:
+                "入口で地図を必ずもらってください！隠れたフォトスポットがたくさんあります。",
               sentiment_score: 0.9,
-              tags: ["지도", "포토존", "어린왕자"],
+              tags: ["지도", "포토존", "입구"],
               images: ["/images/tip-1.jpg"],
               author: "여행러버",
               author_score: 4.8,
@@ -179,10 +247,12 @@ export default function PlaceDetailPage() {
             },
             {
               id: "2",
-              tip_summary:
-                locale === "ko"
-                  ? "계단이 많아서 편한 신발 필수! 중간중간 쉴 수 있는 카페들도 있으니 천천히 둘러보세요."
-                  : "Comfortable shoes are essential due to many stairs! There are cafes along the way to rest.",
+              tip_summary_ko:
+                "계단이 많아서 편한 신발 필수! 중간에 쉴 수 있는 카페도 있어요.",
+              tip_summary_en:
+                "Comfortable shoes are essential due to many stairs! There are cafes to rest.",
+              tip_summary_ja:
+                "階段が多いので楽な靴が必須！途中で休めるカフェもあります。",
               sentiment_score: 0.8,
               tags: ["신발", "계단", "카페"],
               images: [],
@@ -191,21 +261,13 @@ export default function PlaceDetailPage() {
               created_at: "2024-03-10T14:20:00Z",
               quality_score: 0.78,
             },
-            {
-              id: "3",
-              tip_summary:
-                locale === "ko"
-                  ? "낮에도 예쁘지만 야경도 정말 멋져요! 다만 밤에는 조명이 어두운 구간이 있어서 조심하세요."
-                  : "Beautiful during the day, but the night view is amazing too! Be careful of dimly lit areas at night.",
-              sentiment_score: 0.85,
-              tags: ["야경", "조명", "밤"],
-              images: ["/images/tip-3.jpg"],
-              author: "사진작가김씨",
-              author_score: 4.9,
-              created_at: "2024-03-08T19:45:00Z",
-              quality_score: 0.82,
-            },
           ],
+
+          data_quality: {
+            completeness_score: 95,
+            platform_consistency: 88,
+            freshness_score: 92,
+          },
         };
 
         setPlace(mockPlace);
@@ -262,7 +324,7 @@ export default function PlaceDetailPage() {
   const handleShare = async () => {
     const shareData = {
       title: place ? getLocalizedText(place.name) : "",
-      text: place?.ai_recommendations.recommendation_phrase || "",
+      text: place?.data_summary.visit_tips || "",
       url: window.location.href,
     };
 
@@ -277,13 +339,138 @@ export default function PlaceDetailPage() {
     }
   };
 
-  // 혼잡도 상태
-  const getCrowdStatus = (crowdIndex: number) => {
-    if (crowdIndex <= 30)
-      return { text: "여유", color: "text-green-600 bg-green-100" };
-    if (crowdIndex <= 70)
-      return { text: "보통", color: "text-yellow-600 bg-yellow-100" };
-    return { text: "혼잡", color: "text-red-600 bg-red-100" };
+  // 플랫폼별 데이터 비교 컴포넌트
+  const PlatformDataComparison = () => {
+    if (!place) return null;
+
+    const platforms = [
+      {
+        id: "kakao",
+        name: "카카오",
+        data: place.platform_data.kakao,
+        color: "bg-yellow-100 border-yellow-300",
+      },
+      {
+        id: "naver",
+        name: "네이버",
+        data: place.platform_data.naver,
+        color: "bg-green-100 border-green-300",
+      },
+      {
+        id: "google",
+        name: "구글",
+        data: place.platform_data.google,
+        color: "bg-blue-100 border-blue-300",
+      },
+    ].filter((p) => p.data?.available);
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {platforms.map((platform) => (
+          <div
+            key={platform.id}
+            className={cn("border-2 rounded-lg p-4", platform.color)}
+          >
+            <h4 className="font-semibold mb-3 flex items-center gap-2">
+              {platform.name}
+              <span className="text-xs bg-white px-2 py-1 rounded">
+                원본 데이터
+              </span>
+            </h4>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>평점:</span>
+                <span className="font-medium">
+                  ★ {platform.data!.rating.toFixed(1)}
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>리뷰 수:</span>
+                <span className="font-medium">
+                  {platform.data!.review_count.toLocaleString()}개
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>이미지:</span>
+                <span className="font-medium">
+                  {platform.data!.images.length}장
+                </span>
+              </div>
+
+              <div className="text-xs text-gray-600 mt-2">
+                업데이트:{" "}
+                {new Date(platform.data!.last_updated).toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // 데이터 품질 정보 컴포넌트
+  const DataQualityInfo = () => {
+    if (!place) return null;
+
+    const getScoreColor = (score: number) => {
+      if (score >= 90) return "text-green-600 bg-green-100";
+      if (score >= 70) return "text-blue-600 bg-blue-100";
+      if (score >= 50) return "text-yellow-600 bg-yellow-100";
+      return "text-red-600 bg-red-100";
+    };
+
+    return (
+      <div className="bg-gray-50 rounded-lg p-4">
+        <h4 className="font-semibold mb-3 flex items-center gap-2">
+          📊 데이터 품질 정보
+        </h4>
+
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="text-center">
+            <div
+              className={cn(
+                "text-2xl font-bold mb-1 px-2 py-1 rounded",
+                getScoreColor(place.data_quality.completeness_score)
+              )}
+            >
+              {place.data_quality.completeness_score}
+            </div>
+            <div className="text-gray-600">완성도</div>
+          </div>
+
+          <div className="text-center">
+            <div
+              className={cn(
+                "text-2xl font-bold mb-1 px-2 py-1 rounded",
+                getScoreColor(place.data_quality.platform_consistency)
+              )}
+            >
+              {place.data_quality.platform_consistency}
+            </div>
+            <div className="text-gray-600">일치도</div>
+          </div>
+
+          <div className="text-center">
+            <div
+              className={cn(
+                "text-2xl font-bold mb-1 px-2 py-1 rounded",
+                getScoreColor(place.data_quality.freshness_score)
+              )}
+            >
+              {place.data_quality.freshness_score}
+            </div>
+            <div className="text-gray-600">최신성</div>
+          </div>
+        </div>
+
+        <div className="mt-3 text-xs text-gray-600">
+          * 3개 플랫폼 데이터 통합 분석 결과
+        </div>
+      </div>
+    );
   };
 
   // 로딩 상태
@@ -338,9 +525,6 @@ export default function PlaceDetailPage() {
       </div>
     );
   }
-
-  const crowdStatus = getCrowdStatus(place.crowd_index);
-  // const displayedTips = showAllTips ? place.ugc_tips : place.ugc_tips.slice(0, 3); // UGCTips 컴포넌트에서 처리
 
   return (
     <>
@@ -428,41 +612,78 @@ export default function PlaceDetailPage() {
               autoSlide={true}
             />
 
-            {/* 이미지 위 오버레이 정보 */}
+            {/* 기본 정보 오버레이 */}
             <div className="relative -mt-20 z-10 mx-4">
               <div className="bg-white/95 backdrop-blur-sm rounded-xl p-6 shadow-lg">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {getLocalizedText(place.name)}
-                </h1>
-                <div className="flex items-center gap-4 text-sm mb-4">
-                  <div className="flex items-center gap-1">
-                    <svg
-                      className="w-4 h-4 fill-current text-yellow-400"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    <span className="font-medium">{place.rating_avg}</span>
-                    <span className="text-gray-500">
-                      ({place.review_count.toLocaleString()}개 리뷰)
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      {getLocalizedText(place.name)}
+                    </h1>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <svg
+                          className="w-4 h-4 fill-current text-yellow-400"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="font-medium">
+                          {place.rating_avg.toFixed(1)}
+                        </span>
+                        <span className="text-gray-500">
+                          ({place.review_count.toLocaleString()}개 통합 리뷰)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 추천 점수 배지 */}
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-full">
+                    <div className="text-center">
+                      <div className="text-lg font-bold">
+                        {place.recommendation_score.toFixed(1)}
+                      </div>
+                      <div className="text-xs">통합 점수</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 text-gray-600 mb-3">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                  </svg>
+                  <span>{getLocalizedText(place.address)}</span>
+                </div>
+
+                {/* 플랫폼 데이터 가용성 표시 */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-600">데이터 출처:</span>
+                  {place.platform_data.kakao?.available && (
+                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                      카카오
                     </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                    </svg>
-                    <span>{getLocalizedText(place.address)}</span>
-                  </div>
+                  )}
+                  {place.platform_data.naver?.available && (
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                      네이버
+                    </span>
+                  )}
+                  {place.platform_data.google?.available && (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                      구글
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -471,72 +692,172 @@ export default function PlaceDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* 메인 컨텐츠 */}
             <div className="lg:col-span-2 space-y-6">
-              {/* AI 추천 섹션 */}
-              <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50">
+              {/* 데이터 통합 정보 섹션 */}
+              <Card className="border-blue-200">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-800">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                      <svg
-                        className="w-4 h-4 text-white"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-blue-800">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-4 h-4 text-white"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      검증된 데이터 요약
+                    </CardTitle>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant={
+                          activeDataView === "summary" ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setActiveDataView("summary")}
                       >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
+                        요약
+                      </Button>
+                      <Button
+                        variant={
+                          activeDataView === "platform" ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setActiveDataView("platform")}
+                      >
+                        플랫폼별
+                      </Button>
                     </div>
-                    AI 맞춤 추천
-                    <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                      추천도 {place.recommendation_score}/10
-                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {activeDataView === "summary" ? (
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <h4 className="font-semibold mb-2">💡 방문 팁</h4>
+                        <p className="text-gray-800">
+                          {place.data_summary.visit_tips}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-white rounded-lg p-4 border">
+                          <h4 className="font-semibold mb-2 flex items-center gap-2">
+                            <span>⏰</span> 최적 방문시간
+                          </h4>
+                          <p className="text-gray-700 text-sm">
+                            {place.data_summary.best_time}
+                          </p>
+                        </div>
+                      </div>
+
+                      <DataQualityInfo />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="mb-4">
+                        <h4 className="font-semibold mb-2">
+                          플랫폼별 원본 데이터 비교
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          각 플랫폼에서 수집한 실제 데이터를 비교해보세요
+                        </p>
+                      </div>
+                      <PlatformDataComparison />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* UGC 팁 섹션 (AI 최소화) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <svg
+                      className="w-6 h-6 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                    실제 방문자 후기 (데이터 수집)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-blue-900 leading-relaxed text-lg">
-                    {place.ai_recommendations.recommendation_phrase}
-                  </p>
+                  <div className="space-y-4">
+                    {place.ugc_tips.map((tip) => (
+                      <div
+                        key={tip.id}
+                        className="border rounded-lg p-4 bg-gray-50"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">
+                              {tip.author}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ★ {tip.author_score.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            {tip.sentiment_score > 0.7 && (
+                              <span className="text-green-600">😊</span>
+                            )}
+                            {tip.sentiment_score > 0.5 &&
+                              tip.sentiment_score <= 0.7 && (
+                                <span className="text-yellow-600">😐</span>
+                              )}
+                            {tip.sentiment_score <= 0.5 && (
+                              <span className="text-red-600">😔</span>
+                            )}
+                          </div>
+                        </div>
 
-                  {/* 추가 팁들 */}
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="bg-white/60 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-blue-600">🌤️</span>
-                        <span className="font-medium text-sm">날씨 팁</span>
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        {place.ai_recommendations.weather_tips}
-                      </p>
-                    </div>
+                        <p className="text-gray-800 mb-3">
+                          {locale === "ko"
+                            ? tip.tip_summary_ko
+                            : locale === "en"
+                            ? tip.tip_summary_en
+                            : tip.tip_summary_ja}
+                        </p>
 
-                    <div className="bg-white/60 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-blue-600">⏰</span>
-                        <span className="font-medium text-sm">시간 팁</span>
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        {place.ai_recommendations.time_tips}
-                      </p>
-                    </div>
+                        {tip.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {tip.tags.map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className="bg-white text-gray-600 text-xs px-2 py-1 rounded border"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
-                    <div className="bg-white/60 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-blue-600">👥</span>
-                        <span className="font-medium text-sm">혼잡도 팁</span>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>
+                            {new Date(tip.created_at).toLocaleDateString()}
+                          </span>
+                          <span>
+                            품질 점수: {Math.round(tip.quality_score * 100)}%
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-700">
-                        {place.ai_recommendations.crowd_tips}
-                      </p>
+                    ))}
+
+                    <div className="text-center pt-4">
+                      <Button variant="outline">더 많은 후기 보기</Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-
-              {/* UGC 팁 섹션 */}
-              <UGCTips
-                tips={place.ugc_tips}
-                maxVisible={3}
-                showHeader={true}
-                title="실제 방문자 꿀팁"
-              />
 
               {/* 멀티맵 섹션 */}
               <Card>
@@ -580,7 +901,7 @@ export default function PlaceDetailPage() {
                       ))}
                     </div>
 
-                    {/* 지도 영역 (실제로는 iframe이나 지도 API가 들어갈 자리) */}
+                    {/* 지도 영역 플레이스홀더 */}
                     <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
                       <div className="text-center">
                         <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
@@ -617,7 +938,7 @@ export default function PlaceDetailPage() {
                         </p>
                       </div>
 
-                      {/* 지도 위 마커 표시 시뮬레이션 */}
+                      {/* 좌표 정보 표시 */}
                       <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -627,6 +948,9 @@ export default function PlaceDetailPage() {
                         </div>
                         <p className="text-xs text-gray-600">
                           {getLocalizedText(place.address)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          좌표: {place.lat.toFixed(4)}, {place.lon.toFixed(4)}
                         </p>
                       </div>
                     </div>
@@ -667,7 +991,6 @@ export default function PlaceDetailPage() {
                           navigator.clipboard.writeText(
                             `${place.lat}, ${place.lon}`
                           );
-                          // TODO: 토스트 알림 표시
                         }}
                       >
                         <svg
@@ -692,7 +1015,6 @@ export default function PlaceDetailPage() {
                         onClick={() => {
                           const address = getLocalizedText(place.address);
                           navigator.clipboard.writeText(address);
-                          // TODO: 토스트 알림 표시
                         }}
                       >
                         <svg
@@ -773,6 +1095,8 @@ export default function PlaceDetailPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* 기본 정보 */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -913,6 +1237,16 @@ export default function PlaceDetailPage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* 데이터 최종 업데이트 */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">데이터 업데이트</span>
+                      <span className="text-gray-800">
+                        {new Date(place.last_updated).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1001,7 +1335,7 @@ export default function PlaceDetailPage() {
                 {getLocalizedText(place.name)}
               </h3>
               <p className="text-sm text-gray-600">
-                이 장소를 친구들과 공유해보세요!
+                검증된 데이터를 친구들과 공유해보세요!
               </p>
             </div>
 
@@ -1035,7 +1369,6 @@ export default function PlaceDetailPage() {
                 onClick={() => {
                   navigator.clipboard.writeText(window.location.href);
                   setIsShareModalOpen(false);
-                  // TODO: 토스트 알림 표시
                 }}
                 className="col-span-2"
               >
