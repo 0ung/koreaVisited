@@ -1,4 +1,4 @@
-// src/app/[locale]/search/page.tsx - 기존 코드 확장 및 성능 최적화
+// src/app/[locale]/search/page.tsx
 "use client";
 
 import { useTranslations } from "next-intl";
@@ -8,25 +8,23 @@ import { Link } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { cn } from "@/utils/cn";
 
-// 기존 UI 컴포넌트 재사용
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { storage } from "@/utils/storage";
 
-// 동적 임포트로 코드 스플리팅 (기존 패턴 활용)
+/* ────────────────────── 동적 컴포넌트 ────────────────────── */
 const PlaceCard = dynamic(() => import("@/components/PlaceCard"), {
   loading: () => <PlaceCardSkeleton />,
   ssr: false,
 });
-
 const MapView = dynamic(() => import("@/components/MapView"), {
   loading: () => <MapViewSkeleton />,
   ssr: false,
 });
 
-// 기존 타입 재사용
+/* ────────────────────── 타입 ────────────────────── */
 interface Place {
   id: string;
   name: { ko: string; en: string; ja: string };
@@ -49,7 +47,6 @@ interface Place {
   data_quality_score: number;
   last_updated: string;
 }
-
 interface SearchFilters {
   category: string;
   location: string;
@@ -62,7 +59,7 @@ interface SearchFilters {
   crowdLevel: string;
 }
 
-// 스켈레톤 컴포넌트 (기존 패턴 활용)
+/* ────────────────────── 스켈레톤 ────────────────────── */
 const PlaceCardSkeleton = () => (
   <div className="bg-white rounded-xl shadow-sm overflow-hidden">
     <Skeleton variant="rectangular" className="w-full h-48" />
@@ -77,71 +74,68 @@ const PlaceCardSkeleton = () => (
   </div>
 );
 
-const MapViewSkeleton = () => (
-  <div className="h-full bg-gray-200 rounded-lg flex items-center justify-center">
-    <div className="text-gray-500">지도 로딩 중...</div>
-  </div>
-);
+const MapViewSkeleton = () => {
+  const t = useTranslations("Search");
+  return (
+    <div className="h-full bg-gray-200 rounded-lg flex items-center justify-center">
+      <div className="text-gray-500">{t("mapLoading")}</div>
+    </div>
+  );
+};
 
-// 성능 최적화된 가상 스크롤링 훅
-const useVirtualScroll = (items: Place[], itemHeight: number = 300) => {
+/* ────────────────────── 가상 스크롤링 훅 ────────────────────── */
+const useVirtualScroll = (items: Place[], itemHeight = 300) => {
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 10 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
-
-    const scrollTop = containerRef.current.scrollTop;
-    const containerHeight = containerRef.current.clientHeight;
-
-    const start = Math.floor(scrollTop / itemHeight);
+    const el = containerRef.current;
+    if (!el) return;
+    const start = Math.floor(el.scrollTop / itemHeight);
     const end = Math.min(
-      start + Math.ceil(containerHeight / itemHeight) + 2,
+      start + Math.ceil(el.clientHeight / itemHeight) + 2,
       items.length
     );
-
     setVisibleRange({ start, end });
   }, [items.length, itemHeight]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => container.removeEventListener("scroll", handleScroll);
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  const visibleItems = items.slice(visibleRange.start, visibleRange.end);
-  const totalHeight = items.length * itemHeight;
-  const offsetY = visibleRange.start * itemHeight;
-
-  return { containerRef, visibleItems, totalHeight, offsetY };
+  return {
+    containerRef,
+    visibleItems: items.slice(visibleRange.start, visibleRange.end),
+    totalHeight: items.length * itemHeight,
+    offsetY: visibleRange.start * itemHeight,
+  };
 };
 
-// 디바운스 훅 (성능 최적화)
+/* ────────────────────── 디바운스 훅 ────────────────────── */
 const useDebounce = (value: string, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
+  const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
   }, [value, delay]);
-
-  return debouncedValue;
+  return debounced;
 };
 
-// 검색 페이지 메인 컴포넌트
+/* ────────────────────── 메인 컴포넌트 ────────────────────── */
 export default function SearchPage() {
   const t = useTranslations("Search");
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // 상태 관리 (기존 패턴 유지)
+  /* 상태 */
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [places, setPlaces] = useState<Place[]>([]);
   const [filteredPlaces, setFilteredPlaces] = useState<Place[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "map" | "both">("list");
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [filters, setFilters] = useState<SearchFilters>({
     category: "",
     location: "",
@@ -154,145 +148,111 @@ export default function SearchPage() {
     crowdLevel: "",
   });
 
-  // 디바운스된 검색어
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  /* 디바운스 검색어 */
+  const debouncedQuery = useDebounce(searchQuery, 300);
 
-  // 가상 스크롤링 (대량 데이터 성능 최적화)
+  /* 가상 스크롤 */
   const { containerRef, visibleItems, totalHeight, offsetY } =
     useVirtualScroll(filteredPlaces);
 
-  // 검색 API 호출 (기존 로직 최적화)
-  const searchPlaces = useCallback(
-    async (query: string, searchFilters: SearchFilters) => {
-      if (!query.trim()) {
-        setFilteredPlaces([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams({
-          q: query,
-          ...Object.entries(searchFilters).reduce((acc, [key, value]) => {
-            if (value) acc[key] = String(value);
-            return acc;
-          }, {} as Record<string, string>),
-        });
-
-        const response = await fetch(`/api/places/search?${params}`);
-        const data = await response.json();
-
-        setPlaces(data.places || []);
-        setFilteredPlaces(data.places || []);
-      } catch (error) {
-        console.error("검색 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
+  /* ─────────────── 빠른 카테고리 버튼 ─────────────── */
+  const quickCategories = useMemo(
+    () => [
+      { category: "맛집", label: t("quickCategoryRestaurant") },
+      { category: "카페", label: t("quickCategoryCafe") },
+      { category: "관광지", label: t("quickCategoryTourist") },
+      { category: "문화", label: t("quickCategoryCulture") },
+    ],
+    [t]
   );
 
-  // 실시간 필터링 (메모이제이션 활용)
-  const applyFilters = useCallback(
-    (searchResults: Place[], currentFilters: SearchFilters) => {
-      return searchResults.filter((place) => {
-        // 카테고리 필터
-        if (
-          currentFilters.category &&
-          place.category_std !== currentFilters.category
-        ) {
-          return false;
-        }
-
-        // 평점 필터
-        if (
-          currentFilters.rating > 0 &&
-          place.rating_avg < currentFilters.rating
-        ) {
-          return false;
-        }
-
-        // 데이터 품질 필터
-        if (place.data_quality_score < currentFilters.dataQuality) {
-          return false;
-        }
-
-        // 플랫폼 수 필터
-        const platformCount = Object.values(place.platform_data).filter(
-          (p) => p?.available
-        ).length;
-        if (platformCount < currentFilters.platformCount) {
-          return false;
-        }
-
-        // 혼잡도 필터
-        if (currentFilters.crowdLevel && place.crowd_index) {
-          const crowdThresholds = { low: 40, medium: 60, high: 80 };
-          const threshold =
-            crowdThresholds[
-              currentFilters.crowdLevel as keyof typeof crowdThresholds
-            ];
-          if (
-            currentFilters.crowdLevel === "low" &&
-            place.crowd_index > threshold
-          )
-            return false;
-          if (
-            currentFilters.crowdLevel === "medium" &&
-            (place.crowd_index <= 40 || place.crowd_index > 80)
-          )
-            return false;
-          if (
-            currentFilters.crowdLevel === "high" &&
-            place.crowd_index <= threshold
-          )
-            return false;
-        }
-
-        return true;
-      });
-    },
-    []
-  );
-
-  // 검색 실행 (디바운스 적용)
-  useEffect(() => {
-    if (debouncedSearchQuery) {
-      searchPlaces(debouncedSearchQuery, filters);
+  /* ─────────────── 검색 API 호출 ─────────────── */
+  const searchPlaces = useCallback(async (query: string, f: SearchFilters) => {
+    if (!query.trim()) {
+      setFilteredPlaces([]);
+      return;
     }
-  }, [debouncedSearchQuery, filters, searchPlaces]);
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        ...Object.fromEntries(
+          Object.entries(f).filter(([, v]) => v !== "" && v !== 0)
+        ),
+      });
+      const res = await fetch(`/api/places/search?${params}`);
+      const data = await res.json();
+      setPlaces(data.places || []);
+      setFilteredPlaces(data.places || []);
+    } catch (e) {
+      console.error("search failed:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  // 필터 변경 처리
+  /* ─────────────── 필터 적용 ─────────────── */
+  const applyFilters = useCallback(
+    (arr: Place[], f: SearchFilters) =>
+      arr.filter((p) => {
+        if (f.category && p.category_std !== f.category) return false;
+        if (f.rating > 0 && p.rating_avg < f.rating) return false;
+        if (p.data_quality_score < f.dataQuality) return false;
+        const platformCnt = Object.values(p.platform_data).filter(
+          (v) => v?.available
+        ).length;
+        if (platformCnt < f.platformCount) return false;
+        if (f.crowdLevel && p.crowd_index != null) {
+          const thresholds: Record<string, number> = {
+            low: 40,
+            medium: 60,
+            high: 80,
+          };
+          const th = thresholds[f.crowdLevel];
+          if (
+            (f.crowdLevel === "low" && p.crowd_index > th) ||
+            (f.crowdLevel === "medium" &&
+              (p.crowd_index <= 40 || p.crowd_index > 80)) ||
+            (f.crowdLevel === "high" && p.crowd_index <= th)
+          )
+            return false;
+        }
+        return true;
+      }),
+    []
+  );
+
+  /* ─────────────── 효과들 ─────────────── */
   useEffect(() => {
-    const filtered = applyFilters(places, filters);
-    setFilteredPlaces(filtered);
+    if (debouncedQuery) searchPlaces(debouncedQuery, filters);
+  }, [debouncedQuery, filters, searchPlaces]);
+
+  useEffect(() => {
+    setFilteredPlaces(applyFilters(places, filters));
   }, [places, filters, applyFilters]);
 
-  // 북마크 토글 (기존 로직 재사용)
+  /* 북마크 토글 */
   const handleBookmarkToggle = useCallback(
-    async (placeId: string, isBookmarked: boolean) => {
+    async (id: string, isBookmarked: boolean) => {
       try {
-        const method = isBookmarked ? "POST" : "DELETE";
-        await fetch(`/api/user/bookmarks/${placeId}`, { method });
-
-        // UI 즉시 업데이트 (낙관적 업데이트)
+        await fetch(`/api/user/bookmarks/${id}`, {
+          method: isBookmarked ? "POST" : "DELETE",
+        });
         setFilteredPlaces((prev) =>
-          prev.map((place) =>
-            place.id === placeId ? { ...place, isBookmarked } : place
-          )
+          prev.map((p) => (p.id === id ? { ...p, isBookmarked } : p))
         );
-      } catch (error) {
-        console.error("북마크 처리 실패:", error);
+      } catch (e) {
+        console.error("bookmark failed:", e);
       }
     },
     []
   );
 
+  /* ─────────────── 렌더링 ─────────────── */
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6">
-        {/* 검색 헤더 */}
+        {/* ─── 검색 헤더 ─── */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1">
@@ -308,13 +268,13 @@ export default function SearchPage() {
               variant="outline"
               onClick={() => setViewMode(viewMode === "list" ? "map" : "list")}
             >
-              {viewMode === "list" ? "지도" : "목록"}
+              {viewMode === "list" ? t("mapButton") : t("listButton")}
             </Button>
           </div>
 
-          {/* 빠른 필터 */}
+          {/* 빠른 카테고리 */}
           <div className="flex flex-wrap gap-2">
-            {["맛집", "카페", "관광지", "문화"].map((category) => (
+            {quickCategories.map(({ category, label }) => (
               <Button
                 key={category}
                 variant={filters.category === category ? "default" : "outline"}
@@ -326,138 +286,133 @@ export default function SearchPage() {
                   }))
                 }
               >
-                {category}
+                {label}
               </Button>
             ))}
           </div>
         </div>
 
-        {/* 검색 결과 */}
+        {/* ─── 레이아웃 ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* 상세 필터 사이드바 */}
+          {/* 사이드 필터 */}
           <div className="lg:col-span-1">
             <Card>
               <CardContent className="p-4">
-                <h3 className="font-semibold mb-4">필터</h3>
+                <h3 className="font-semibold mb-4">{t("filterTitle")}</h3>
 
-                {/* 평점 필터 */}
+                {/* 최소 평점 */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">
-                    최소 평점
+                    {t("labelMinRating")}
                   </label>
                   <select
                     value={filters.rating}
                     onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
+                      setFilters((p) => ({
+                        ...p,
                         rating: Number(e.target.value),
                       }))
                     }
                     className="w-full p-2 border rounded-md"
                   >
-                    <option value={0}>전체</option>
-                    <option value={4}>4.0 이상</option>
-                    <option value={4.5}>4.5 이상</option>
+                    <option value={0}>{t("optionAll")}</option>
+                    <option value={4}>{t("optionRating4")}</option>
+                    <option value={4.5}>{t("optionRating45")}</option>
                   </select>
                 </div>
 
-                {/* 데이터 품질 필터 */}
+                {/* 데이터 품질 */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">
-                    데이터 품질
+                    {t("labelDataQuality")}
                   </label>
                   <select
                     value={filters.dataQuality}
                     onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
+                      setFilters((p) => ({
+                        ...p,
                         dataQuality: Number(e.target.value),
                       }))
                     }
                     className="w-full p-2 border rounded-md"
                   >
-                    <option value={70}>양호 이상</option>
-                    <option value={80}>우수 이상</option>
-                    <option value={90}>검증됨</option>
+                    <option value={70}>{t("optionQuality70")}</option>
+                    <option value={80}>{t("optionQuality80")}</option>
+                    <option value={90}>{t("optionQuality90")}</option>
                   </select>
                 </div>
 
-                {/* 혼잡도 필터 */}
+                {/* 혼잡도 */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">
-                    혼잡도
+                    {t("labelCrowdLevel")}
                   </label>
                   <select
                     value={filters.crowdLevel}
                     onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        crowdLevel: e.target.value,
-                      }))
+                      setFilters((p) => ({ ...p, crowdLevel: e.target.value }))
                     }
                     className="w-full p-2 border rounded-md"
                   >
-                    <option value="">전체</option>
-                    <option value="low">여유</option>
-                    <option value="medium">보통</option>
-                    <option value="high">혼잡</option>
+                    <option value="">{t("optionAll")}</option>
+                    <option value="low">{t("optionCrowdLow")}</option>
+                    <option value="medium">{t("optionCrowdMedium")}</option>
+                    <option value="high">{t("optionCrowdHigh")}</option>
                   </select>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* 검색 결과 영역 */}
+          {/* 결과 영역 */}
           <div className="lg:col-span-3">
+            {/* 결과 개수 */}
+            <p className="text-gray-600 mb-4">
+              {t("resultPrefix")} {filteredPlaces.length.toLocaleString()}{" "}
+              {t("resultSuffix")}
+            </p>
+
             {isLoading ? (
+              /* 스켈레톤 */
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <PlaceCardSkeleton key={i} />
                 ))}
               </div>
             ) : viewMode === "map" ? (
+              /* 지도 보기 */
               <div className="h-[600px]">
                 <MapView places={filteredPlaces} />
               </div>
             ) : (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-gray-600">
-                    총 {filteredPlaces.length.toLocaleString()}개의 장소
-                  </p>
-                </div>
-
-                {/* 가상 스크롤링을 통한 최적화된 리스트 렌더링 */}
-                <div
-                  ref={containerRef}
-                  className="h-[800px] overflow-auto"
-                  style={{ height: "800px" }}
-                >
-                  <div style={{ height: totalHeight, position: "relative" }}>
-                    <div
-                      style={{
-                        transform: `translateY(${offsetY}px)`,
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                      }}
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {visibleItems.map((place, index) => (
-                          <PlaceCard
-                            key={place.id}
-                            place={place}
-                            locale="ko"
-                            showRecommendationScore
-                            showPlatformIndicator
-                            showDataQuality
-                            showCrowdStatus
-                            onBookmarkToggle={handleBookmarkToggle}
-                            priority={index < 3} // 첫 3개 이미지 우선 로딩
-                          />
-                        ))}
-                      </div>
+              /* 목록 보기 + 가상 스크롤 */
+              <div
+                ref={containerRef}
+                className="h-[800px] overflow-auto"
+                style={{ height: 800 }}
+              >
+                <div style={{ height: totalHeight, position: "relative" }}>
+                  <div
+                    style={{
+                      transform: `translateY(${offsetY}px)`,
+                      position: "absolute",
+                      inset: 0,
+                    }}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {visibleItems.map((p, idx) => (
+                        <PlaceCard
+                          key={p.id}
+                          place={p}
+                          locale="ko"
+                          showRecommendationScore
+                          showPlatformIndicator
+                          showDataQuality
+                          showCrowdStatus
+                          onBookmarkToggle={handleBookmarkToggle}
+                          priority={idx < 3}
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>

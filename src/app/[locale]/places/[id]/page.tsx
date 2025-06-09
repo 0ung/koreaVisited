@@ -107,7 +107,7 @@ interface MapProvider {
 }
 
 export default function PlaceDetailPage() {
-  const t = useTranslations();
+  const t = useTranslations("PlaceDetail");
   const params = useParams();
   const router = useRouter();
   const locale = params.locale as string;
@@ -276,7 +276,7 @@ export default function PlaceDetailPage() {
         const savedPlaces = storage.get<string[]>("savedPlaces", []);
         setIsSaved(savedPlaces.includes(placeId));
       } catch (err) {
-        setError("장소 정보를 불러올 수 없습니다.");
+        setError(t("loadError"));
         console.error("Place detail load error:", err);
       } finally {
         setIsLoading(false);
@@ -284,7 +284,7 @@ export default function PlaceDetailPage() {
     };
 
     loadPlaceDetail();
-  }, [placeId, locale]);
+  }, [placeId, locale, t]);
 
   // 북마크 토글
   const toggleBookmark = () => {
@@ -339,6 +339,36 @@ export default function PlaceDetailPage() {
     }
   };
 
+  // 가격대 번역 함수
+  const getPriceLevelText = (level: number) => {
+    switch (level) {
+      case 1:
+        return t("cheap");
+      case 2:
+        return t("moderate");
+      case 3:
+        return t("expensive");
+      case 4:
+        return t("luxury");
+      default:
+        return t("moderate");
+    }
+  };
+
+  // 혼잡도 상태 텍스트
+  const getCrowdStatusText = (crowdIndex: number) => {
+    if (crowdIndex <= 30) return t("optimal");
+    if (crowdIndex <= 70) return t("normal");
+    return t("notRecommended");
+  };
+
+  // 대기시간 텍스트
+  const getWaitTimeText = (crowdIndex: number) => {
+    if (crowdIndex <= 30) return t("noWait");
+    if (crowdIndex <= 70) return t("shortWait");
+    return t("longWait");
+  };
+
   // 플랫폼별 데이터 비교 컴포넌트
   const PlatformDataComparison = () => {
     if (!place) return null;
@@ -374,34 +404,34 @@ export default function PlaceDetailPage() {
             <h4 className="font-semibold mb-3 flex items-center gap-2">
               {platform.name}
               <span className="text-xs bg-white px-2 py-1 rounded">
-                원본 데이터
+                {t("originalData")}
               </span>
             </h4>
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>평점:</span>
+                <span>{t("rating")}:</span>
                 <span className="font-medium">
                   ★ {platform.data!.rating.toFixed(1)}
                 </span>
               </div>
 
               <div className="flex justify-between">
-                <span>리뷰 수:</span>
+                <span>{t("reviewCount")}:</span>
                 <span className="font-medium">
                   {platform.data!.review_count.toLocaleString()}개
                 </span>
               </div>
 
               <div className="flex justify-between">
-                <span>이미지:</span>
+                <span>{t("images")}:</span>
                 <span className="font-medium">
                   {platform.data!.images.length}장
                 </span>
               </div>
 
               <div className="text-xs text-gray-600 mt-2">
-                업데이트:{" "}
+                {t("update")}:{" "}
                 {new Date(platform.data!.last_updated).toLocaleDateString()}
               </div>
             </div>
@@ -425,7 +455,7 @@ export default function PlaceDetailPage() {
     return (
       <div className="bg-gray-50 rounded-lg p-4">
         <h4 className="font-semibold mb-3 flex items-center gap-2">
-          📊 데이터 품질 정보
+          📊 {t("dataQuality")}
         </h4>
 
         <div className="grid grid-cols-3 gap-4 text-sm">
@@ -438,7 +468,7 @@ export default function PlaceDetailPage() {
             >
               {place.data_quality.completeness_score}
             </div>
-            <div className="text-gray-600">완성도</div>
+            <div className="text-gray-600">{t("completeness")}</div>
           </div>
 
           <div className="text-center">
@@ -450,7 +480,7 @@ export default function PlaceDetailPage() {
             >
               {place.data_quality.platform_consistency}
             </div>
-            <div className="text-gray-600">일치도</div>
+            <div className="text-gray-600">{t("consistency")}</div>
           </div>
 
           <div className="text-center">
@@ -462,12 +492,12 @@ export default function PlaceDetailPage() {
             >
               {place.data_quality.freshness_score}
             </div>
-            <div className="text-gray-600">최신성</div>
+            <div className="text-gray-600">{t("freshness")}</div>
           </div>
         </div>
 
         <div className="mt-3 text-xs text-gray-600">
-          * 3개 플랫폼 데이터 통합 분석 결과
+          * {t("platformIntegration")}
         </div>
       </div>
     );
@@ -517,10 +547,10 @@ export default function PlaceDetailPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            장소를 찾을 수 없습니다
+            {t("notFound")}
           </h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => router.back()}>이전으로 돌아가기</Button>
+          <Button onClick={() => router.back()}>{t("back")}</Button>
         </div>
       </div>
     );
@@ -551,7 +581,7 @@ export default function PlaceDetailPage() {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                뒤로가기
+                {t("back")}
               </Button>
 
               <div className="flex items-center gap-2">
@@ -559,7 +589,7 @@ export default function PlaceDetailPage() {
                   variant="ghost"
                   size="icon"
                   onClick={handleShare}
-                  aria-label="공유하기"
+                  aria-label={t("share")}
                 >
                   <svg
                     className="w-5 h-5"
@@ -580,7 +610,7 @@ export default function PlaceDetailPage() {
                   variant={isSaved ? "default" : "outline"}
                   size="icon"
                   onClick={toggleBookmark}
-                  aria-label={isSaved ? "북마크 해제" : "북마크 추가"}
+                  aria-label={isSaved ? t("bookmarkRemove") : t("bookmarkAdd")}
                 >
                   <svg
                     className={cn("w-5 h-5", isSaved && "fill-current")}
@@ -632,7 +662,8 @@ export default function PlaceDetailPage() {
                           {place.rating_avg.toFixed(1)}
                         </span>
                         <span className="text-gray-500">
-                          ({place.review_count.toLocaleString()}개 통합 리뷰)
+                          ({place.review_count.toLocaleString()}
+                          {t("integratedReviews")})
                         </span>
                       </div>
                     </div>
@@ -644,7 +675,7 @@ export default function PlaceDetailPage() {
                       <div className="text-lg font-bold">
                         {place.recommendation_score.toFixed(1)}
                       </div>
-                      <div className="text-xs">통합 점수</div>
+                      <div className="text-xs">{t("integratedScore")}</div>
                     </div>
                   </div>
                 </div>
@@ -668,7 +699,7 @@ export default function PlaceDetailPage() {
 
                 {/* 플랫폼 데이터 가용성 표시 */}
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-600">데이터 출처:</span>
+                  <span className="text-gray-600">{t("dataSource")}:</span>
                   {place.platform_data.kakao?.available && (
                     <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
                       카카오
@@ -706,7 +737,7 @@ export default function PlaceDetailPage() {
                           <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      검증된 데이터 요약
+                      {t("verifiedDataSummary")}
                     </CardTitle>
 
                     <div className="flex gap-2">
@@ -717,7 +748,7 @@ export default function PlaceDetailPage() {
                         size="sm"
                         onClick={() => setActiveDataView("summary")}
                       >
-                        요약
+                        {t("summary")}
                       </Button>
                       <Button
                         variant={
@@ -726,7 +757,7 @@ export default function PlaceDetailPage() {
                         size="sm"
                         onClick={() => setActiveDataView("platform")}
                       >
-                        플랫폼별
+                        {t("platformData")}
                       </Button>
                     </div>
                   </div>
@@ -735,7 +766,9 @@ export default function PlaceDetailPage() {
                   {activeDataView === "summary" ? (
                     <div className="space-y-4">
                       <div className="bg-blue-50 rounded-lg p-4">
-                        <h4 className="font-semibold mb-2">💡 방문 팁</h4>
+                        <h4 className="font-semibold mb-2">
+                          💡 {t("visitTips")}
+                        </h4>
                         <p className="text-gray-800">
                           {place.data_summary.visit_tips}
                         </p>
@@ -744,7 +777,7 @@ export default function PlaceDetailPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="bg-white rounded-lg p-4 border">
                           <h4 className="font-semibold mb-2 flex items-center gap-2">
-                            <span>⏰</span> 최적 방문시간
+                            <span>⏰</span> {t("bestTime")}
                           </h4>
                           <p className="text-gray-700 text-sm">
                             {place.data_summary.best_time}
@@ -758,10 +791,10 @@ export default function PlaceDetailPage() {
                     <div className="space-y-4">
                       <div className="mb-4">
                         <h4 className="font-semibold mb-2">
-                          플랫폼별 원본 데이터 비교
+                          {t("platformComparison")}
                         </h4>
                         <p className="text-sm text-gray-600">
-                          각 플랫폼에서 수집한 실제 데이터를 비교해보세요
+                          {t("platformComparisonDesc")}
                         </p>
                       </div>
                       <PlatformDataComparison />
@@ -787,7 +820,7 @@ export default function PlaceDetailPage() {
                         d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                       />
                     </svg>
-                    실제 방문자 후기 (데이터 수집)
+                    {t("visitorReviews")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -846,14 +879,15 @@ export default function PlaceDetailPage() {
                             {new Date(tip.created_at).toLocaleDateString()}
                           </span>
                           <span>
-                            품질 점수: {Math.round(tip.quality_score * 100)}%
+                            {t("qualityScore")}:{" "}
+                            {Math.round(tip.quality_score * 100)}%
                           </span>
                         </div>
                       </div>
                     ))}
 
                     <div className="text-center pt-4">
-                      <Button variant="outline">더 많은 후기 보기</Button>
+                      <Button variant="outline">{t("moreReviews")}</Button>
                     </div>
                   </div>
                 </CardContent>
@@ -876,7 +910,7 @@ export default function PlaceDetailPage() {
                         d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
                       />
                     </svg>
-                    지도 및 길찾기
+                    {t("mapAndDirections")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -950,7 +984,8 @@ export default function PlaceDetailPage() {
                           {getLocalizedText(place.address)}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          좌표: {place.lat.toFixed(4)}, {place.lon.toFixed(4)}
+                          {t("coordinates")}: {place.lat.toFixed(4)},{" "}
+                          {place.lon.toFixed(4)}
                         </p>
                       </div>
                     </div>
@@ -981,7 +1016,7 @@ export default function PlaceDetailPage() {
                           mapProviders.find((p) => p.id === selectedMapProvider)
                             ?.name
                         }
-                        에서 보기
+                        {t("viewOnMap")}
                       </Button>
 
                       <Button
@@ -1006,7 +1041,7 @@ export default function PlaceDetailPage() {
                             d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                           />
                         </svg>
-                        좌표 복사
+                        {t("copyCoordinates")}
                       </Button>
 
                       <Button
@@ -1030,7 +1065,7 @@ export default function PlaceDetailPage() {
                             d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
                           />
                         </svg>
-                        주소 복사
+                        {t("copyAddress")}
                       </Button>
                     </div>
                   </div>
@@ -1057,7 +1092,7 @@ export default function PlaceDetailPage() {
                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                       />
                     </svg>
-                    실시간 혼잡도
+                    {t("realTimeCrowd")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1072,24 +1107,24 @@ export default function PlaceDetailPage() {
 
                   <div className="mt-4 space-y-3 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">현재 방문 적합도</span>
+                      <span className="text-gray-600">
+                        {t("currentSuitability")}
+                      </span>
                       <span className="font-medium">
                         {place.crowd_index <= 30
-                          ? "😊 최적"
+                          ? "😊 " + getCrowdStatusText(place.crowd_index)
                           : place.crowd_index <= 70
-                          ? "😐 보통"
-                          : "😅 비추"}
+                          ? "😐 " + getCrowdStatusText(place.crowd_index)
+                          : "😅 " + getCrowdStatusText(place.crowd_index)}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">예상 대기시간</span>
+                      <span className="text-gray-600">
+                        {t("expectedWaitTime")}
+                      </span>
                       <span className="font-medium">
-                        {place.crowd_index <= 30
-                          ? "없음"
-                          : place.crowd_index <= 70
-                          ? "5-10분"
-                          : "15-20분"}
+                        {getWaitTimeText(place.crowd_index)}
                       </span>
                     </div>
                   </div>
@@ -1113,7 +1148,7 @@ export default function PlaceDetailPage() {
                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    기본 정보
+                    {t("basicInfo")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1133,7 +1168,7 @@ export default function PlaceDetailPage() {
                         />
                       </svg>
                       <div>
-                        <p className="font-medium">전화번호</p>
+                        <p className="font-medium">{t("phoneNumber")}</p>
                         <p className="text-gray-600">{place.tel}</p>
                       </div>
                     </div>
@@ -1153,7 +1188,7 @@ export default function PlaceDetailPage() {
                         />
                       </svg>
                       <div>
-                        <p className="font-medium">운영시간</p>
+                        <p className="font-medium">{t("operatingHours")}</p>
                         <p className="text-gray-600">{place.opening_hours}</p>
                       </div>
                     </div>
@@ -1174,14 +1209,14 @@ export default function PlaceDetailPage() {
                           />
                         </svg>
                         <div>
-                          <p className="font-medium">웹사이트</p>
+                          <p className="font-medium">{t("website")}</p>
                           <a
                             href={place.website}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 underline"
                           >
-                            공식 홈페이지
+                            {t("officialWebsite")}
                           </a>
                         </div>
                       </div>
@@ -1203,19 +1238,11 @@ export default function PlaceDetailPage() {
                           />
                         </svg>
                         <div>
-                          <p className="font-medium">가격대</p>
+                          <p className="font-medium">{t("priceLevel")}</p>
                           <p className="text-gray-600">
                             {"₩".repeat(place.price_level)}
                             <span className="ml-2 text-sm">
-                              (
-                              {place.price_level === 1
-                                ? "저렴"
-                                : place.price_level === 2
-                                ? "보통"
-                                : place.price_level === 3
-                                ? "비쌈"
-                                : "고급"}
-                              )
+                              ({getPriceLevelText(place.price_level)})
                             </span>
                           </p>
                         </div>
@@ -1225,7 +1252,7 @@ export default function PlaceDetailPage() {
 
                   {/* 편의시설 */}
                   <div className="pt-4 border-t border-gray-200">
-                    <p className="font-medium mb-3">편의시설 & 특징</p>
+                    <p className="font-medium mb-3">{t("amenitiesFeatures")}</p>
                     <div className="flex flex-wrap gap-2">
                       {place.features.map((feature, index) => (
                         <span
@@ -1241,7 +1268,7 @@ export default function PlaceDetailPage() {
                   {/* 데이터 최종 업데이트 */}
                   <div className="pt-4 border-t border-gray-200">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">데이터 업데이트</span>
+                      <span className="text-gray-600">{t("dataUpdate")}</span>
                       <span className="text-gray-800">
                         {new Date(place.last_updated).toLocaleDateString()}
                       </span>
@@ -1270,7 +1297,7 @@ export default function PlaceDetailPage() {
                         d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                       />
                     </svg>
-                    전화하기
+                    {t("callPhone")}
                   </Button>
 
                   <Button
@@ -1293,7 +1320,7 @@ export default function PlaceDetailPage() {
                         d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
                       />
                     </svg>
-                    길찾기
+                    {t("getDirections")}
                   </Button>
 
                   <Button
@@ -1314,7 +1341,7 @@ export default function PlaceDetailPage() {
                         d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
                       />
                     </svg>
-                    공유하기
+                    {t("share")}
                   </Button>
                 </CardContent>
               </Card>
@@ -1326,7 +1353,7 @@ export default function PlaceDetailPage() {
         <Modal
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
-          title="장소 공유하기"
+          title={t("sharePlace")}
           size="sm"
         >
           <div className="space-y-4">
@@ -1334,9 +1361,7 @@ export default function PlaceDetailPage() {
               <h3 className="font-medium text-gray-900 mb-2">
                 {getLocalizedText(place.name)}
               </h3>
-              <p className="text-sm text-gray-600">
-                검증된 데이터를 친구들과 공유해보세요!
-              </p>
+              <p className="text-sm text-gray-600">{t("shareDescription")}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1349,7 +1374,7 @@ export default function PlaceDetailPage() {
                   window.open(url, "_blank");
                 }}
               >
-                🐦 트위터
+                🐦 {t("twitter")}
               </Button>
 
               <Button
@@ -1361,7 +1386,7 @@ export default function PlaceDetailPage() {
                   window.open(url, "_blank");
                 }}
               >
-                📘 페이스북
+                📘 {t("facebook")}
               </Button>
 
               <Button
@@ -1372,7 +1397,7 @@ export default function PlaceDetailPage() {
                 }}
                 className="col-span-2"
               >
-                🔗 링크 복사
+                🔗 {t("copyLink")}
               </Button>
             </div>
           </div>

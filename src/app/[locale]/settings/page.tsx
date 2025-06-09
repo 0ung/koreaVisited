@@ -1,17 +1,19 @@
+// src/app/[locale]/settings/page.tsx
 "use client";
 
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
+
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import { cn } from "@/utils/cn";
 
-// 기존 타입 패턴 활용
+/* ────────────────────── 타입 ────────────────────── */
 interface UserSettings {
   profile: {
     nickname: string;
@@ -45,7 +47,6 @@ interface UserSettings {
     offlineMode: boolean;
   };
 }
-
 interface SettingsSection {
   id: string;
   title: string;
@@ -53,11 +54,12 @@ interface SettingsSection {
   description: string;
 }
 
+/* ────────────────────── 메인 컴포넌트 ────────────────────── */
 export default function SettingsPage() {
-  const t = useTranslations("SettingsPage");
-  const params = useParams();
-  const locale = params.locale as string;
+  const t = useTranslations("Settings");
+  const { locale } = useParams<{ locale: string }>();
 
+  /* 상태 */
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,147 +68,73 @@ export default function SettingsPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // 설정 데이터 로드
+  /* ─────────────── 설정 로딩 (mock) ─────────────── */
   useEffect(() => {
-    const loadSettings = async () => {
+    (async () => {
       setIsLoading(true);
-      try {
-        // API 호출 시뮬레이션
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        const mockSettings: UserSettings = {
-          profile: {
-            nickname: "여행러버",
-            bio: "한국의 숨은 명소를 찾아 여행하는 것을 좋아합니다.",
-            location: "서울, 대한민국",
-            avatar: "",
-            preferredLanguage: locale,
-          },
-          notifications: {
-            email: true,
-            push: true,
-            sms: false,
-            marketing: false,
-            weeklyDigest: true,
-            newPlaces: true,
-            bookmarkReminders: true,
-          },
-          privacy: {
-            publicProfile: true,
-            showLocation: true,
-            showActivity: false,
-            allowMessages: true,
-            dataTracking: false,
-          },
-          preferences: {
-            theme: "light",
-            currency: "KRW",
-            dateFormat: "YYYY-MM-DD",
-            distanceUnit: "km",
-            autoLocation: true,
-            offlineMode: false,
-          },
-        };
-
-        setSettings(mockSettings);
-      } catch (error) {
-        console.error("설정 로드 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadSettings();
+      await new Promise((r) => setTimeout(r, 800));
+      setSettings({
+        profile: {
+          nickname: "여행러버",
+          bio: "한국의 숨은 명소를 찾아 여행하는 것을 좋아합니다.",
+          location: "서울, 대한민국",
+          avatar: "",
+          preferredLanguage: locale,
+        },
+        notifications: {
+          email: true,
+          push: true,
+          sms: false,
+          marketing: false,
+          weeklyDigest: true,
+          newPlaces: true,
+          bookmarkReminders: true,
+        },
+        privacy: {
+          publicProfile: true,
+          showLocation: true,
+          showActivity: false,
+          allowMessages: true,
+          dataTracking: false,
+        },
+        preferences: {
+          theme: "light",
+          currency: "KRW",
+          dateFormat: "YYYY-MM-DD",
+          distanceUnit: "km",
+          autoLocation: true,
+          offlineMode: false,
+        },
+      });
+      setIsLoading(false);
+    })();
   }, [locale]);
 
-  // 설정 업데이트 핸들러
+  /* ─────────────── 공통 헬퍼 ─────────────── */
   const updateSetting = (
     section: keyof UserSettings,
     key: string,
     value: any
   ) => {
     if (!settings) return;
-
     setSettings((prev) => ({
       ...prev!,
-      [section]: {
-        ...prev![section],
-        [key]: value,
-      },
+      [section]: { ...prev![section], [key]: value },
     }));
     setHasChanges(true);
   };
 
-  // 설정 저장
-  const handleSave = async () => {
-    if (!settings || !hasChanges) return;
+  const label = (ns: string, k: string) => t(`${ns}_${k}_label`);
+  const desc = (ns: string, k: string) => t(`${ns}_${k}_desc`);
 
-    setIsSaving(true);
-    try {
-      // API 호출
-      await fetch("/api/user/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
-
-      setHasChanges(false);
-      // 성공 알림 (실제로는 toast 사용)
-      alert(t("settingsSaved"));
-    } catch (error) {
-      console.error("설정 저장 실패:", error);
-      alert(t("saveError"));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // 계정 삭제
-  const handleDeleteAccount = async () => {
-    try {
-      await fetch("/api/user/delete", { method: "DELETE" });
-      // 로그아웃 처리
-      window.location.href = "/";
-    } catch (error) {
-      console.error("계정 삭제 실패:", error);
-      alert(t("deleteError"));
-    }
-  };
-
-  // 데이터 내보내기
-  const handleExportData = async () => {
-    try {
-      const response = await fetch("/api/user/export");
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `travelkorea-data-${
-        new Date().toISOString().split("T")[0]
-      }.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("데이터 내보내기 실패:", error);
-      alert(t("exportError"));
-    }
-  };
-
-  // 설정 섹션 정의
-  const settingsSections: SettingsSection[] = [
+  /* ─────────────── 사이드바 정의 ─────────────── */
+  const sections: SettingsSection[] = [
     {
       id: "profile",
-      title: "프로필 설정",
-      description: "닉네임, 소개, 언어 등 기본 정보",
+      title: t("sectionProfileTitle"),
+      description: t("sectionProfileDesc"),
       icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -218,35 +146,25 @@ export default function SettingsPage() {
     },
     {
       id: "notifications",
-      title: "알림 설정",
-      description: "이메일, 푸시 등 알림 관리",
+      title: t("sectionNotificationsTitle"),
+      description: t("sectionNotificationsDesc"),
       icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M15 17h5l-5 5v-5zM4.146 4.146l14.708 14.708m-7.071-7.071l7.071 7.071M3 21v-4.8L16.2 3l2.8 2.8L6 18.8H3z"
+            d="M15 17h5l-5 5v-5zM4 4l16 16"
           />
         </svg>
       ),
     },
     {
       id: "privacy",
-      title: "개인정보 설정",
-      description: "프로필 공개, 데이터 추적 등",
+      title: t("sectionPrivacyTitle"),
+      description: t("sectionPrivacyDesc"),
       icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -258,33 +176,23 @@ export default function SettingsPage() {
     },
     {
       id: "preferences",
-      title: "환경설정",
-      description: "테마, 통화, 단위 등",
+      title: t("sectionPreferencesTitle"),
+      description: t("sectionPreferencesDesc"),
       icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            d="M12 4v1m0 14v1m8-8h1M4 12H3m14.95 6.95l.7.7M5.05 5.05l.7.7m0 12.2l-.7.7M18.364 5.636l-.707.707"
           />
         </svg>
       ),
     },
   ];
 
-  if (isLoading) {
+  /* ─────────────── 로딩 스켈레톤 ─────────────── */
+  if (isLoading)
     return (
       <ProtectedRoute>
         <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -301,88 +209,93 @@ export default function SettingsPage() {
         </div>
       </ProtectedRoute>
     );
-  }
-
   if (!settings) return null;
 
+  /* ─────────────── 렌더링 ─────────────── */
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8 max-w-6xl">
-          {/* 헤더 */}
+          {/* 페이지 헤더 */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">설정</h1>
-            <p className="text-gray-600">계정 및 앱 환경을 관리하세요</p>
+            <h1 className="text-3xl font-bold mb-2">{t("pageHeaderTitle")}</h1>
+            <p className="text-gray-600">{t("pageHeaderDesc")}</p>
           </div>
 
           <div className="flex gap-8">
-            {/* 사이드바 */}
-            <div className="w-64 flex-shrink-0">
-              <div className="space-y-1 sticky top-8">
-                {settingsSections.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => setActiveSection(section.id)}
-                    className={cn(
-                      "w-full text-left p-4 rounded-lg transition-colors",
-                      "hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500",
-                      activeSection === section.id
-                        ? "bg-blue-50 text-blue-700 border-l-4 border-blue-500"
-                        : "text-gray-700"
-                    )}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={cn(
-                          "flex-shrink-0",
-                          activeSection === section.id
-                            ? "text-blue-600"
-                            : "text-gray-400"
-                        )}
-                      >
-                        {section.icon}
-                      </div>
-                      <div>
-                        <div className="font-medium">{section.title}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {section.description}
-                        </div>
+            {/* ───── 사이드바 ───── */}
+            <aside className="w-64 flex-shrink-0 space-y-1 sticky top-8">
+              {sections.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setActiveSection(s.id)}
+                  className={cn(
+                    "w-full text-left p-4 rounded-lg transition-colors",
+                    "hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                    activeSection === s.id
+                      ? "bg-blue-50 text-blue-700 border-l-4 border-blue-500"
+                      : "text-gray-700"
+                  )}
+                >
+                  <div className="flex items-center space-x-3">
+                    <span
+                      className={cn(
+                        "flex-shrink-0",
+                        activeSection === s.id
+                          ? "text-blue-600"
+                          : "text-gray-400"
+                      )}
+                    >
+                      {s.icon}
+                    </span>
+                    <div>
+                      <div className="font-medium">{s.title}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {s.description}
                       </div>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                  </div>
+                </button>
+              ))}
+            </aside>
 
-            {/* 메인 컨텐츠 */}
-            <div className="flex-1">
+            {/* ───── 메인 카드 ───── */}
+            <main className="flex-1">
               <Card className="shadow-sm">
                 <CardHeader className="border-b">
                   <CardTitle className="flex items-center justify-between">
-                    {
-                      settingsSections.find((s) => s.id === activeSection)
-                        ?.title
-                    }
+                    {sections.find((s) => s.id === activeSection)?.title}
                     {hasChanges && (
                       <Button
-                        onClick={handleSave}
-                        disabled={isSaving}
                         size="sm"
+                        onClick={async () => {
+                          if (!settings) return;
+                          setIsSaving(true);
+                          await fetch("/api/user/settings", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(settings),
+                          });
+                          setIsSaving(false);
+                          setHasChanges(false);
+                          alert(t("settingsSaved"));
+                        }}
+                        disabled={isSaving}
                       >
-                        {isSaving ? "저장 중..." : "변경사항 저장"}
+                        {isSaving ? t("saving") : t("saveChanges")}
                       </Button>
                     )}
                   </CardTitle>
                 </CardHeader>
 
                 <CardContent className="p-6">
-                  {/* 프로필 설정 */}
+                  {/* ───────── 프로필 ───────── */}
                   {activeSection === "profile" && (
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            닉네임
+                          <label className="block mb-2 text-sm font-medium">
+                            {t("profileNickname")}
                           </label>
                           <Input
                             value={settings.profile.nickname}
@@ -393,13 +306,13 @@ export default function SettingsPage() {
                                 e.target.value
                               )
                             }
-                            placeholder="닉네임을 입력하세요"
+                            placeholder={t("profileNicknamePH")}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            선호 언어
+                          <label className="block mb-2 text-sm font-medium">
+                            {t("profileLanguage")}
                           </label>
                           <select
                             value={settings.profile.preferredLanguage}
@@ -410,7 +323,7 @@ export default function SettingsPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 border rounded-lg"
                           >
                             <option value="ko">한국어</option>
                             <option value="en">English</option>
@@ -420,170 +333,111 @@ export default function SettingsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          소개
+                        <label className="block mb-2 text-sm font-medium">
+                          {t("profileBio")}
                         </label>
                         <textarea
                           value={settings.profile.bio}
                           onChange={(e) =>
                             updateSetting("profile", "bio", e.target.value)
                           }
-                          placeholder="자신을 소개해보세요"
+                          placeholder={t("profileBioPH")}
                           rows={3}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full p-3 border rounded-lg"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          위치
+                        <label className="block mb-2 text-sm font-medium">
+                          {t("profileLocation")}
                         </label>
                         <Input
                           value={settings.profile.location}
                           onChange={(e) =>
                             updateSetting("profile", "location", e.target.value)
                           }
-                          placeholder="거주 지역을 입력하세요"
+                          placeholder={t("profileLocationPH")}
                         />
                       </div>
                     </div>
                   )}
 
-                  {/* 알림 설정 */}
+                  {/* ───────── 알림 ───────── */}
                   {activeSection === "notifications" && (
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 gap-4">
-                        {Object.entries(settings.notifications).map(
-                          ([key, value]) => (
-                            <div
-                              key={key}
-                              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                            >
-                              <div>
-                                <div className="font-medium text-gray-900">
-                                  {key === "email"
-                                    ? "이메일 알림"
-                                    : key === "push"
-                                    ? "푸시 알림"
-                                    : key === "sms"
-                                    ? "SMS 알림"
-                                    : key === "marketing"
-                                    ? "마케팅 알림"
-                                    : key === "weeklyDigest"
-                                    ? "주간 요약"
-                                    : key === "newPlaces"
-                                    ? "새로운 장소 알림"
-                                    : key === "bookmarkReminders"
-                                    ? "북마크 리마인더"
-                                    : key}
-                                </div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                  {key === "email"
-                                    ? "새로운 정보와 업데이트를 이메일로 받기"
-                                    : key === "push"
-                                    ? "앱에서 실시간 알림 받기"
-                                    : key === "sms"
-                                    ? "중요한 알림을 문자로 받기"
-                                    : key === "marketing"
-                                    ? "프로모션과 이벤트 정보 받기"
-                                    : key === "weeklyDigest"
-                                    ? "매주 인기 장소 요약 받기"
-                                    : key === "newPlaces"
-                                    ? "관심 지역 새 장소 알림"
-                                    : key === "bookmarkReminders"
-                                    ? "북마크한 장소 방문 알림"
-                                    : ""}
-                                </div>
-                              </div>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={value}
-                                  onChange={(e) =>
-                                    updateSetting(
-                                      "notifications",
-                                      key,
-                                      e.target.checked
-                                    )
-                                  }
-                                  className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                              </label>
+                      {Object.entries(settings.notifications).map(([k, v]) => (
+                        <div
+                          key={k}
+                          className="flex items-center justify-between p-4 border rounded-lg"
+                        >
+                          <div>
+                            <div className="font-medium">
+                              {label("notifications", k)}
                             </div>
-                          )
-                        )}
-                      </div>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {desc("notifications", k)}
+                            </p>
+                          </div>
+                          <label className="relative inline-flex items-center">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={v}
+                              onChange={(e) =>
+                                updateSetting(
+                                  "notifications",
+                                  k,
+                                  e.target.checked
+                                )
+                              }
+                            />
+                            <span className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-full" />
+                          </label>
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {/* 프라이버시 설정 */}
+                  {/* ───────── 프라이버시 ───────── */}
                   {activeSection === "privacy" && (
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 gap-4">
-                        {Object.entries(settings.privacy).map(
-                          ([key, value]) => (
-                            <div
-                              key={key}
-                              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                            >
-                              <div>
-                                <div className="font-medium text-gray-900">
-                                  {key === "publicProfile"
-                                    ? "공개 프로필"
-                                    : key === "showLocation"
-                                    ? "위치 표시"
-                                    : key === "showActivity"
-                                    ? "활동 공개"
-                                    : key === "allowMessages"
-                                    ? "메시지 허용"
-                                    : key === "dataTracking"
-                                    ? "데이터 추적"
-                                    : key}
-                                </div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                  {key === "publicProfile"
-                                    ? "다른 사용자가 내 프로필을 볼 수 있도록 허용"
-                                    : key === "showLocation"
-                                    ? "프로필에서 위치 정보 표시"
-                                    : key === "showActivity"
-                                    ? "북마크, 방문 기록 등 활동 공개"
-                                    : key === "allowMessages"
-                                    ? "다른 사용자의 메시지 받기"
-                                    : key === "dataTracking"
-                                    ? "서비스 개선을 위한 사용 데이터 수집 허용"
-                                    : ""}
-                                </div>
-                              </div>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={value}
-                                  onChange={(e) =>
-                                    updateSetting(
-                                      "privacy",
-                                      key,
-                                      e.target.checked
-                                    )
-                                  }
-                                  className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                              </label>
+                      {Object.entries(settings.privacy).map(([k, v]) => (
+                        <div
+                          key={k}
+                          className="flex items-center justify-between p-4 border rounded-lg"
+                        >
+                          <div>
+                            <div className="font-medium">
+                              {label("privacy", k)}
                             </div>
-                          )
-                        )}
-                      </div>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {desc("privacy", k)}
+                            </p>
+                          </div>
+                          <label className="relative inline-flex items-center">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={v}
+                              onChange={(e) =>
+                                updateSetting("privacy", k, e.target.checked)
+                              }
+                            />
+                            <span className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-full" />
+                          </label>
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {/* 환경설정 */}
+                  {/* ───────── 환경설정 ───────── */}
                   {activeSection === "preferences" && (
-                    <div className="space-y-6">
+                    <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* 테마 */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            테마
+                          <label className="block mb-2 text-sm font-medium">
+                            {t("prefTheme")}
                           </label>
                           <select
                             value={settings.preferences.theme}
@@ -594,17 +448,18 @@ export default function SettingsPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 border rounded-lg"
                           >
-                            <option value="light">라이트 모드</option>
-                            <option value="dark">다크 모드</option>
-                            <option value="system">시스템 설정 따름</option>
+                            <option value="light">{t("themeLight")}</option>
+                            <option value="dark">{t("themeDark")}</option>
+                            <option value="system">{t("themeSystem")}</option>
                           </select>
                         </div>
 
+                        {/* 통화 */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            통화
+                          <label className="block mb-2 text-sm font-medium">
+                            {t("prefCurrency")}
                           </label>
                           <select
                             value={settings.preferences.currency}
@@ -615,7 +470,7 @@ export default function SettingsPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 border rounded-lg"
                           >
                             <option value="KRW">KRW (₩)</option>
                             <option value="USD">USD ($)</option>
@@ -624,9 +479,10 @@ export default function SettingsPage() {
                           </select>
                         </div>
 
+                        {/* 거리 단위 */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            거리 단위
+                          <label className="block mb-2 text-sm font-medium">
+                            {t("prefDistanceUnit")}
                           </label>
                           <select
                             value={settings.preferences.distanceUnit}
@@ -637,16 +493,17 @@ export default function SettingsPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 border rounded-lg"
                           >
-                            <option value="km">킬로미터</option>
-                            <option value="miles">마일</option>
+                            <option value="km">{t("unitKm")}</option>
+                            <option value="miles">{t("unitMiles")}</option>
                           </select>
                         </div>
 
+                        {/* 날짜 형식 */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            날짜 형식
+                          <label className="block mb-2 text-sm font-medium">
+                            {t("prefDateFormat")}
                           </label>
                           <select
                             value={settings.preferences.dateFormat}
@@ -657,222 +514,221 @@ export default function SettingsPage() {
                                 e.target.value
                               )
                             }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 border rounded-lg"
                           >
-                            <option value="YYYY-MM-DD">2024-06-15</option>
-                            <option value="MM/DD/YYYY">06/15/2024</option>
-                            <option value="DD/MM/YYYY">15/06/2024</option>
+                            <option value="YYYY-MM-DD">
+                              2024-06-15 (YYYY-MM-DD)
+                            </option>
+                            <option value="MM/DD/YYYY">
+                              06/15/2024 (MM/DD/YYYY)
+                            </option>
+                            <option value="DD/MM/YYYY">
+                              15/06/2024 (DD/MM/YYYY)
+                            </option>
                           </select>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4">
-                        {["autoLocation", "offlineMode"].map((key) => (
-                          <div
-                            key={key}
-                            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                          >
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {key === "autoLocation"
-                                  ? "자동 위치 감지"
-                                  : "오프라인 모드"}
-                              </div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                {key === "autoLocation"
-                                  ? "현재 위치를 자동으로 감지하여 주변 정보 제공"
-                                  : "데이터 사용량 절약을 위한 오프라인 모드"}
-                              </div>
+                      {/* 토글 두 개 */}
+                      {(["autoLocation", "offlineMode"] as const).map((k) => (
+                        <div
+                          key={k}
+                          className="flex items-center justify-between mt-4 p-4 border rounded-lg"
+                        >
+                          <div>
+                            <div className="font-medium">
+                              {label("preferences", k)}
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={
-                                  settings.preferences[
-                                    key as keyof typeof settings.preferences
-                                  ] as boolean
-                                }
-                                onChange={(e) =>
-                                  updateSetting(
-                                    "preferences",
-                                    key,
-                                    e.target.checked
-                                  )
-                                }
-                                className="sr-only peer"
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {desc("preferences", k)}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          <label className="relative inline-flex items-center">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={settings.preferences[k]}
+                              onChange={(e) =>
+                                updateSetting(
+                                  "preferences",
+                                  k,
+                                  e.target.checked
+                                )
+                              }
+                            />
+                            <span className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 after:absolute after:top-[2px] after:left-[2px] after:w-5 after:h-5 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-full" />
+                          </label>
+                        </div>
+                      ))}
+                    </>
                   )}
                 </CardContent>
               </Card>
 
-              {/* 위험 영역 */}
+              {/* ───────── 위험 영역 카드 ───────── */}
               <Card className="mt-8 border-red-200 bg-red-50">
                 <CardHeader className="border-b border-red-200">
-                  <CardTitle className="text-red-800 flex items-center space-x-2">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                  <CardTitle className="text-red-800 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                        d="M12 9v2m0 4h.01M4 21h16l-8-18-8 18z"
                       />
                     </svg>
-                    <span>위험 영역</span>
+                    {t("dangerZone")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-red-800">
-                          데이터 내보내기
-                        </h4>
-                        <p className="text-sm text-red-600 mt-1">
-                          개인 데이터를 JSON 파일로 다운로드합니다
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowExportModal(true)}
-                        className="border-red-300 text-red-700 hover:bg-red-100"
-                      >
-                        데이터 내보내기
-                      </Button>
+                <CardContent className="p-6 space-y-4">
+                  {/* 데이터 내보내기 */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-red-800">
+                        {t("exportTitle")}
+                      </h4>
+                      <p className="text-sm text-red-600 mt-1">
+                        {t("exportDesc")}
+                      </p>
                     </div>
+                    <Button
+                      variant="outline"
+                      className="border-red-300 text-red-700 hover:bg-red-100"
+                      onClick={() => setShowExportModal(true)}
+                    >
+                      {t("exportBtn")}
+                    </Button>
+                  </div>
 
-                    <div className="border-t border-red-200 pt-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium text-red-800">
-                            계정 삭제
-                          </h4>
-                          <p className="text-sm text-red-600 mt-1">
-                            모든 데이터가 영구적으로 삭제됩니다
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowDeleteModal(true)}
-                          className="border-red-500 text-red-700 hover:bg-red-100"
-                        >
-                          계정 삭제
-                        </Button>
-                      </div>
+                  {/* 계정 삭제 */}
+                  <div className="border-t border-red-200 pt-4 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-red-800">
+                        {t("deleteTitle")}
+                      </h4>
+                      <p className="text-sm text-red-600 mt-1">
+                        {t("deleteDesc")}
+                      </p>
                     </div>
+                    <Button
+                      variant="outline"
+                      className="border-red-500 text-red-700 hover:bg-red-100"
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      {t("deleteBtn")}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </main>
           </div>
         </div>
 
-        {/* 계정 삭제 확인 모달 */}
+        {/* ───────── 모달들 ───────── */}
         <Modal
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
-          title="계정 삭제 확인"
+          title={t("deleteModalTitle")}
           size="md"
         >
           <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <svg
-                  className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-                <div>
-                  <h4 className="font-medium text-red-800">⚠️ 주의</h4>
-                  <p className="text-sm text-red-600 mt-1">
-                    이 작업은 되돌릴 수 없습니다.
-                  </p>
-                </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex">
+              <svg
+                className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01M4 21h16l-8-18-8 18z"
+                />
+              </svg>
+              <div className="ml-3">
+                <h4 className="font-medium text-red-800">
+                  {t("deleteWarnTitle")}
+                </h4>
+                <p className="text-sm text-red-600 mt-1">
+                  {t("deleteWarnDesc")}
+                </p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                계정을 삭제하면 다음 데이터가 영구적으로 삭제됩니다:
-              </p>
-              <ul className="text-sm text-gray-600 list-disc list-inside space-y-1 ml-4">
-                <li>프로필 정보 및 설정</li>
-                <li>북마크한 모든 장소</li>
-                <li>작성한 리뷰 및 댓글</li>
-                <li>여행 기록 및 통계</li>
-              </ul>
-            </div>
+            <p className="text-sm text-gray-600">{t("deleteListIntro")}</p>
+            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 ml-4">
+              <li>{t("deleteItemProfile")}</li>
+              <li>{t("deleteItemBookmarks")}</li>
+              <li>{t("deleteItemReviews")}</li>
+              <li>{t("deleteItemHistory")}</li>
+            </ul>
 
-            <div className="flex space-x-3">
+            <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => setShowDeleteModal(false)}
                 className="flex-1"
+                onClick={() => setShowDeleteModal(false)}
               >
-                취소
+                {t("cancel")}
               </Button>
               <Button
-                onClick={handleDeleteAccount}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={async () => {
+                  await fetch("/api/user/delete", { method: "DELETE" });
+                  window.location.href = "/";
+                }}
               >
-                계정 삭제
+                {t("confirmDelete")}
               </Button>
             </div>
           </div>
         </Modal>
 
-        {/* 데이터 내보내기 확인 모달 */}
+        {/* 데이터 내보내기 */}
         <Modal
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
-          title="데이터 내보내기"
+          title={t("exportModalTitle")}
           size="md"
         >
           <div className="space-y-4">
-            <p className="text-gray-600">
-              개인 데이터를 JSON 형식으로 다운로드합니다.
-            </p>
-
+            <p className="text-gray-600">{t("exportModalDesc")}</p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-medium text-blue-800 mb-2">
-                포함되는 데이터:
+                {t("exportInclude")}
               </h4>
-              <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
-                <li>프로필 정보</li>
-                <li>북마크한 장소 목록</li>
-                <li>작성한 리뷰 및 평점</li>
-                <li>여행 기록 및 방문 장소</li>
+              <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
+                <li>{t("exportItemProfile")}</li>
+                <li>{t("exportItemBookmarks")}</li>
+                <li>{t("exportItemReviews")}</li>
+                <li>{t("exportItemHistory")}</li>
               </ul>
             </div>
 
-            <div className="flex space-x-3">
+            <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => setShowExportModal(false)}
                 className="flex-1"
+                onClick={() => setShowExportModal(false)}
               >
-                취소
+                {t("cancel")}
               </Button>
-              <Button onClick={handleExportData} className="flex-1">
-                다운로드
+              <Button
+                className="flex-1"
+                onClick={async () => {
+                  const res = await fetch("/api/user/export");
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `travelkorea-${new Date()
+                    .toISOString()
+                    .slice(0, 10)}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                {t("download")}
               </Button>
             </div>
           </div>

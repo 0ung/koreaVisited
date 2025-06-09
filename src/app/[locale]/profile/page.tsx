@@ -47,7 +47,7 @@ interface UserActivity {
 }
 
 export default function ProfilePage() {
-  const t = useTranslations();
+  const t = useTranslations("Profile");
   const params = useParams();
   const locale = params.locale as string;
 
@@ -67,6 +67,36 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  // 활동 타입별 액션 메시지 가져오기
+  const getActivityActionText = (type: string) => {
+    switch (type) {
+      case "bookmark":
+        return t("bookmarkAdded");
+      case "visit":
+        return t("visitCompleted");
+      case "review":
+        return t("reviewWritten");
+      case "plan":
+        return t("addedToTravelPlan");
+      default:
+        return "";
+    }
+  };
+
+  // 언어 옵션 가져오기
+  const getLanguageText = (langCode: string) => {
+    switch (langCode) {
+      case "ko":
+        return t("korean");
+      case "en":
+        return t("english");
+      case "ja":
+        return t("japanese");
+      default:
+        return t("korean");
+    }
+  };
 
   // 프로필 데이터 로드
   useEffect(() => {
@@ -106,7 +136,7 @@ export default function ProfilePage() {
             type: "bookmark",
             placeName: "부산 감천문화마을",
             placeId: "place-1",
-            action: "북마크에 추가했습니다",
+            action: getActivityActionText("bookmark"),
             timestamp: "2024-03-15T10:30:00Z",
           },
           {
@@ -114,7 +144,7 @@ export default function ProfilePage() {
             type: "visit",
             placeName: "홍대 합정역 카페거리",
             placeId: "place-2",
-            action: "방문 완료했습니다",
+            action: getActivityActionText("visit"),
             timestamp: "2024-03-14T16:45:00Z",
           },
           {
@@ -122,7 +152,7 @@ export default function ProfilePage() {
             type: "review",
             placeName: "명동 칼국수 골목",
             placeId: "place-3",
-            action: "리뷰를 작성했습니다",
+            action: getActivityActionText("review"),
             timestamp: "2024-03-13T12:20:00Z",
             rating: 5,
           },
@@ -131,7 +161,7 @@ export default function ProfilePage() {
             type: "plan",
             placeName: "제주 성산일출봉",
             placeId: "place-4",
-            action: "여행 계획에 추가했습니다",
+            action: getActivityActionText("plan"),
             timestamp: "2024-03-12T09:10:00Z",
           },
         ];
@@ -152,7 +182,7 @@ export default function ProfilePage() {
     };
 
     loadProfile();
-  }, [locale]);
+  }, [locale, t]);
 
   // 프로필 업데이트
   const handleSaveProfile = async () => {
@@ -185,7 +215,7 @@ export default function ProfilePage() {
   // 비밀번호 변경
   const handleChangePassword = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert("새 비밀번호가 일치하지 않습니다.");
+      alert(t("passwordMismatch"));
       return;
     }
 
@@ -339,10 +369,12 @@ export default function ProfilePage() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              프로필을 불러올 수 없습니다
+              {t("profileLoadError")}
             </h2>
-            <p className="text-gray-600 mb-4">잠시 후 다시 시도해주세요.</p>
-            <Button onClick={() => window.location.reload()}>다시 시도</Button>
+            <p className="text-gray-600 mb-4">{t("tryAgainLater")}</p>
+            <Button onClick={() => window.location.reload()}>
+              {t("tryAgain")}
+            </Button>
           </div>
         </div>
       </ProtectedRoute>
@@ -397,7 +429,7 @@ export default function ProfilePage() {
                   )}
                 <p className="text-gray-400 text-sm mt-1">
                   {new Date(userProfile.joinedAt).toLocaleDateString("ko-KR")}{" "}
-                  가입
+                  {t("joined")}
                 </p>
               </div>
             </div>
@@ -420,7 +452,7 @@ export default function ProfilePage() {
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-                프로필 편집
+                {t("editProfile")}
               </Button>
               <Button
                 variant="gradient"
@@ -439,7 +471,7 @@ export default function ProfilePage() {
                     d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2m0 0V7a2 2 0 012-2m-2 2a2 2 0 002-2M9 7a2 2 0 012-2m-2 2a2 2 0 002-2"
                   />
                 </svg>
-                비밀번호 변경
+                {t("changePassword")}
               </Button>
             </div>
           </div>
@@ -456,25 +488,27 @@ export default function ProfilePage() {
                 <div className="text-2xl font-bold text-blue-600 mb-1">
                   {userProfile.stats.bookmarksCount}
                 </div>
-                <div className="text-sm text-gray-600">북마크</div>
+                <div className="text-sm text-gray-600">{t("bookmarks")}</div>
               </Card>
               <Card className="text-center p-6">
                 <div className="text-2xl font-bold text-green-600 mb-1">
                   {userProfile.stats.visitedCount}
                 </div>
-                <div className="text-sm text-gray-600">방문 완료</div>
+                <div className="text-sm text-gray-600">
+                  {t("visitedComplete")}
+                </div>
               </Card>
               <Card className="text-center p-6">
                 <div className="text-2xl font-bold text-yellow-600 mb-1">
                   {userProfile.stats.reviewsCount}
                 </div>
-                <div className="text-sm text-gray-600">리뷰</div>
+                <div className="text-sm text-gray-600">{t("reviews")}</div>
               </Card>
               <Card className="text-center p-6">
                 <div className="text-2xl font-bold text-purple-600 mb-1">
                   {userProfile.stats.totalTripDays}
                 </div>
-                <div className="text-sm text-gray-600">여행일</div>
+                <div className="text-sm text-gray-600">{t("travelDays")}</div>
               </Card>
             </div>
 
@@ -482,11 +516,11 @@ export default function ProfilePage() {
             {isEditing && (
               <Card>
                 <CardHeader>
-                  <CardTitle>프로필 편집</CardTitle>
+                  <CardTitle>{t("editProfileTitle")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Input
-                    label="닉네임"
+                    label={t("nickname")}
                     value={editForm.nickname}
                     onChange={(e) =>
                       setEditForm((prev) => ({
@@ -494,12 +528,12 @@ export default function ProfilePage() {
                         nickname: e.target.value,
                       }))
                     }
-                    placeholder="닉네임을 입력하세요"
+                    placeholder={t("nicknamePlaceholder")}
                   />
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      자기소개
+                      {t("bio")}
                     </label>
                     <textarea
                       value={editForm.bio}
@@ -509,14 +543,14 @@ export default function ProfilePage() {
                           bio: e.target.value,
                         }))
                       }
-                      placeholder="자기소개를 입력하세요"
+                      placeholder={t("bioPlaceholder")}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
                   <Input
-                    label="위치"
+                    label={t("location")}
                     value={editForm.location}
                     onChange={(e) =>
                       setEditForm((prev) => ({
@@ -524,12 +558,12 @@ export default function ProfilePage() {
                         location: e.target.value,
                       }))
                     }
-                    placeholder="위치를 입력하세요"
+                    placeholder={t("locationPlaceholder")}
                   />
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      선호 언어
+                      {t("preferredLanguage")}
                     </label>
                     <select
                       value={editForm.preferredLanguage}
@@ -541,22 +575,22 @@ export default function ProfilePage() {
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="ko">한국어</option>
-                      <option value="en">English</option>
-                      <option value="ja">日本語</option>
+                      <option value="ko">{t("korean")}</option>
+                      <option value="en">{t("english")}</option>
+                      <option value="ja">{t("japanese")}</option>
                     </select>
                   </div>
 
                   <div className="flex gap-3 pt-4">
                     <Button onClick={handleSaveProfile} className="flex-1">
-                      저장
+                      {t("save")}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setIsEditing(false)}
                       className="flex-1"
                     >
-                      취소
+                      {t("cancel")}
                     </Button>
                   </div>
                 </CardContent>
@@ -566,7 +600,7 @@ export default function ProfilePage() {
             {/* 최근 활동 */}
             <Card>
               <CardHeader>
-                <CardTitle>최근 활동</CardTitle>
+                <CardTitle>{t("recentActivity")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -612,7 +646,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="mt-6 text-center">
                   <Button variant="outline" asChild>
-                    <Link href="/bookmarks">전체 활동 보기</Link>
+                    <Link href="/bookmarks">{t("viewAllActivity")}</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -624,11 +658,13 @@ export default function ProfilePage() {
             {/* 자기소개 */}
             <Card>
               <CardHeader>
-                <CardTitle>자기소개</CardTitle>
+                <CardTitle>{t("bioTitle")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700 leading-relaxed">
-                  {userProfile.bio || "아직 자기소개가 작성되지 않았습니다."}
+                  {userProfile.bio ||
+                    t("noBioYet") ||
+                    "아직 자기소개가 작성되지 않았습니다."}
                 </p>
               </CardContent>
             </Card>
@@ -636,7 +672,7 @@ export default function ProfilePage() {
             {/* 빠른 액션 */}
             <Card>
               <CardHeader>
-                <CardTitle>빠른 액션</CardTitle>
+                <CardTitle>{t("quickActions")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
@@ -658,7 +694,7 @@ export default function ProfilePage() {
                         d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
                       />
                     </svg>
-                    내 북마크
+                    {t("myBookmarks")}
                   </Link>
                 </Button>
 
@@ -681,7 +717,7 @@ export default function ProfilePage() {
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                       />
                     </svg>
-                    새 장소 찾기
+                    {t("findNewPlaces")}
                   </Link>
                 </Button>
 
@@ -704,7 +740,7 @@ export default function ProfilePage() {
                         d="M19 11H5m14-7l-7 7-7-7m14 18l-7-7-7 7"
                       />
                     </svg>
-                    카테고리 둘러보기
+                    {t("browseCategories")}
                   </Link>
                 </Button>
               </CardContent>
@@ -717,12 +753,12 @@ export default function ProfilePage() {
       <Modal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
-        title="비밀번호 변경"
+        title={t("chanagePasswordTitle")}
         size="sm"
       >
         <div className="space-y-4">
           <Input
-            label="현재 비밀번호"
+            label={t("currentPassword")}
             type="password"
             value={passwordForm.currentPassword}
             onChange={(e) =>
@@ -731,11 +767,11 @@ export default function ProfilePage() {
                 currentPassword: e.target.value,
               }))
             }
-            placeholder="현재 비밀번호를 입력하세요"
+            placeholder={t("currentPasswordPlaceholder")}
           />
 
           <Input
-            label="새 비밀번호"
+            label={t("newPassword")}
             type="password"
             value={passwordForm.newPassword}
             onChange={(e) =>
@@ -744,11 +780,11 @@ export default function ProfilePage() {
                 newPassword: e.target.value,
               }))
             }
-            placeholder="새 비밀번호를 입력하세요"
+            placeholder={t("newPasswordPlaceholder")}
           />
 
           <Input
-            label="새 비밀번호 확인"
+            label={t("confirmNewPassword")}
             type="password"
             value={passwordForm.confirmPassword}
             onChange={(e) =>
@@ -757,7 +793,7 @@ export default function ProfilePage() {
                 confirmPassword: e.target.value,
               }))
             }
-            placeholder="새 비밀번호를 다시 입력하세요"
+            placeholder={t("confirmNewPasswordPlaceholder")}
           />
 
           <div className="flex gap-3 pt-4">
@@ -766,7 +802,7 @@ export default function ProfilePage() {
               onClick={() => setIsPasswordModalOpen(false)}
               className="flex-1"
             >
-              취소
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleChangePassword}
@@ -777,7 +813,7 @@ export default function ProfilePage() {
               }
               className="flex-1"
             >
-              변경
+              {t("change")}
             </Button>
           </div>
         </div>

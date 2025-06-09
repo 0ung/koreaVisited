@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations } from "next-intl"; // 기존 next-intl 사용
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Link } from "@/i18n/navigation";
@@ -47,7 +47,12 @@ interface BookmarkFolder {
 }
 
 export default function BookmarksPage() {
-  const t = useTranslations();
+  // next-intl 사용 (DB 기반 번역 데이터)
+  const bookmarksT = useTranslations("Bookmarks");
+  const commonT = useTranslations("Common");
+  const headerT = useTranslations("Header");
+  const homeT = useTranslations("Home");
+
   const params = useParams();
   const locale = params.locale as string;
 
@@ -154,7 +159,7 @@ export default function BookmarksPage() {
         const mockFolders: BookmarkFolder[] = [
           {
             id: "all",
-            name: "전체",
+            name: bookmarksT("allCategories") || "전체",
             color: "#6B7280",
             placeIds: ["1", "2", "3"],
             created_at: "2024-03-01T00:00:00Z",
@@ -188,22 +193,31 @@ export default function BookmarksPage() {
     };
 
     loadBookmarks();
-  }, [locale]);
+  }, [locale, bookmarksT]);
 
-  // 카테고리 한글명 (기존 SearchResultItem 컴포넌트에서 재사용)
+  // 카테고리 한글명 (DB 번역 데이터 활용)
   const getCategoryName = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      restaurants: "맛집",
-      cafes: "카페",
-      attractions: "관광지",
-      hotels: "숙박",
-      shopping: "쇼핑",
-      nightlife: "유흥",
-      culture: "문화",
-      nature: "자연",
-      sports: "스포츠",
-    };
-    return categoryMap[category] || category;
+    // Home 네임스페이스의 categories에서 가져오기
+    const categoryKey = `categories.${category}`;
+    const translated = homeT(categoryKey);
+
+    // 번역이 키 그대로 반환되면 기본값 사용
+    if (translated === categoryKey) {
+      const categoryMap: Record<string, string> = {
+        restaurants: "맛집",
+        cafes: "카페",
+        attractions: "관광지",
+        hotels: "숙박",
+        shopping: "쇼핑",
+        nightlife: "나이트라이프",
+        culture: "문화",
+        nature: "자연",
+        sports: "스포츠",
+      };
+      return categoryMap[category] || category;
+    }
+
+    return translated;
   };
 
   // 필터링 및 정렬
@@ -302,10 +316,10 @@ export default function BookmarksPage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                내 북마크
+                {bookmarksT("myBookmarks")}
               </h1>
               <p className="text-gray-600">
-                저장한 장소들을 관리하고 여행 계획을 세워보세요
+                {bookmarksT("noBookmarksDescription")}
               </p>
             </div>
 
@@ -328,10 +342,10 @@ export default function BookmarksPage() {
                     d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                   />
                 </svg>
-                폴더 만들기
+                {commonT("createFolder") || "폴더 만들기"}
               </Button>
               <Button variant="gradient" asChild>
-                <Link href="/search">새 장소 찾기</Link>
+                <Link href="/search">{bookmarksT("exploreButton")}</Link>
               </Button>
             </div>
           </div>
@@ -342,7 +356,7 @@ export default function BookmarksPage() {
             <div className="flex-1">
               <Input
                 type="text"
-                placeholder="북마크한 장소 검색..."
+                placeholder={commonT("searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftIcon={
@@ -369,9 +383,9 @@ export default function BookmarksPage() {
               onChange={(e) => setSortBy(e.target.value as any)}
               className="px-4 py-2 border border-gray-300 rounded-lg bg-white"
             >
-              <option value="recent">최근 순</option>
-              <option value="name">이름 순</option>
-              <option value="rating">평점 순</option>
+              <option value="recent">{bookmarksT("sortByDate")}</option>
+              <option value="name">{bookmarksT("sortByName")}</option>
+              <option value="rating">{bookmarksT("sortByRating")}</option>
             </select>
 
             {/* 뷰 모드 */}
@@ -381,6 +395,7 @@ export default function BookmarksPage() {
                 size="sm"
                 onClick={() => setViewMode("grid")}
                 className="rounded-none"
+                title="그리드 보기"
               >
                 <svg
                   className="w-4 h-4"
@@ -401,6 +416,7 @@ export default function BookmarksPage() {
                 size="sm"
                 onClick={() => setViewMode("list")}
                 className="rounded-none"
+                title="리스트 보기"
               >
                 <svg
                   className="w-4 h-4"
@@ -426,7 +442,9 @@ export default function BookmarksPage() {
           {/* 사이드바 - 폴더 목록 */}
           <div className="hidden lg:block w-64 flex-shrink-0">
             <div className="bg-white rounded-xl p-6 border border-gray-200 sticky top-24">
-              <h3 className="font-semibold text-gray-900 mb-4">폴더</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">
+                {commonT("folders") || "폴더"}
+              </h3>
               <div className="space-y-2">
                 {folders.map((folder) => (
                   <button
@@ -492,14 +510,14 @@ export default function BookmarksPage() {
                     className="overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     {viewMode === "grid" ? (
-                      // 그리드 뷰 (홈페이지 카드 스타일 재사용)
+                      // 그리드 뷰
                       <>
                         <div className="relative h-48 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400">
                           {/* 방문 배지 */}
                           {place.visited && (
                             <div className="absolute top-3 left-3 z-10">
                               <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                                방문완료
+                                {bookmarksT("visitedOn") || "방문완료"}
                               </span>
                             </div>
                           )}
@@ -513,8 +531,9 @@ export default function BookmarksPage() {
                               className="w-8 h-8 bg-white/90 hover:bg-white"
                               title={
                                 place.visited
-                                  ? "미방문으로 변경"
-                                  : "방문완료로 변경"
+                                  ? bookmarksT("neverVisited") ||
+                                    "미방문으로 변경"
+                                  : bookmarksT("visitedOn") || "방문완료로 변경"
                               }
                             >
                               <svg
@@ -541,6 +560,9 @@ export default function BookmarksPage() {
                               size="icon"
                               onClick={() => removeBookmark(place.id)}
                               className="w-8 h-8 bg-white/90 hover:bg-white text-red-600"
+                              title={
+                                bookmarksT("removeBookmark") || "북마크 제거"
+                              }
                             >
                               <svg
                                 className="w-4 h-4"
@@ -611,9 +633,13 @@ export default function BookmarksPage() {
 
                           <div className="text-xs text-gray-400">
                             {new Date(place.bookmarked_at).toLocaleDateString(
-                              "ko-KR"
+                              locale === "ko"
+                                ? "ko-KR"
+                                : locale === "ja"
+                                ? "ja-JP"
+                                : "en-US"
                             )}{" "}
-                            저장
+                            {commonT("saved") || "저장"}
                           </div>
                         </CardContent>
                       </>
@@ -682,6 +708,13 @@ export default function BookmarksPage() {
                                     ? "text-green-600"
                                     : "text-gray-400"
                                 )}
+                                title={
+                                  place.visited
+                                    ? bookmarksT("neverVisited") ||
+                                      "미방문으로 변경"
+                                    : bookmarksT("visitedOn") ||
+                                      "방문완료로 변경"
+                                }
                               >
                                 <svg
                                   className="w-4 h-4"
@@ -702,6 +735,9 @@ export default function BookmarksPage() {
                                 size="icon"
                                 onClick={() => removeBookmark(place.id)}
                                 className="h-8 w-8 text-red-600"
+                                title={
+                                  bookmarksT("removeBookmark") || "북마크 제거"
+                                }
                               >
                                 <svg
                                   className="w-4 h-4"
@@ -745,13 +781,15 @@ export default function BookmarksPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   {searchQuery
-                    ? "검색 결과가 없습니다"
-                    : "아직 북마크한 장소가 없어요"}
+                    ? commonT("noResults") || "검색 결과가 없습니다"
+                    : bookmarksT("noBookmarks") ||
+                      "아직 북마크한 장소가 없어요"}
                 </h3>
                 <p className="text-gray-600 mb-6">
                   {searchQuery
-                    ? "다른 키워드로 검색해보세요"
-                    : "마음에 드는 장소를 북마크에 저장해보세요"}
+                    ? commonT("tryAgain") || "다른 키워드로 검색해보세요"
+                    : bookmarksT("noBookmarksDescription") ||
+                      "마음에 드는 장소를 북마크에 저장해보세요"}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   {searchQuery ? (
@@ -759,15 +797,20 @@ export default function BookmarksPage() {
                       variant="outline"
                       onClick={() => setSearchQuery("")}
                     >
-                      전체 북마크 보기
+                      {bookmarksT("allCategories") || "전체 북마크 보기"}
                     </Button>
                   ) : (
                     <>
                       <Button variant="gradient" asChild>
-                        <Link href="/search">장소 찾아보기</Link>
+                        <Link href="/search">
+                          {bookmarksT("exploreButton") || "장소 찾아보기"}
+                        </Link>
                       </Button>
                       <Button variant="outline" asChild>
-                        <Link href="/categories">카테고리별 둘러보기</Link>
+                        <Link href="/categories">
+                          {commonT("exploreCategories") ||
+                            "카테고리별 둘러보기"}
+                        </Link>
                       </Button>
                     </>
                   )}
@@ -782,17 +825,20 @@ export default function BookmarksPage() {
       <Modal
         isOpen={isCreateFolderModalOpen}
         onClose={() => setIsCreateFolderModalOpen(false)}
-        title="새 폴더 만들기"
+        title={commonT("createFolder") || "새 폴더 만들기"}
         size="sm"
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              폴더 이름
+              {commonT("folderName") || "폴더 이름"}
             </label>
             <Input
               type="text"
-              placeholder="예: 서울 여행, 부산 맛집..."
+              placeholder={
+                commonT("folderNamePlaceholder") ||
+                "예: 서울 여행, 부산 맛집..."
+              }
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               autoFocus
@@ -801,7 +847,7 @@ export default function BookmarksPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              폴더 색상
+              {commonT("folderColor") || "폴더 색상"}
             </label>
             <div className="flex gap-2">
               {[
@@ -834,14 +880,14 @@ export default function BookmarksPage() {
               onClick={() => setIsCreateFolderModalOpen(false)}
               className="flex-1"
             >
-              취소
+              {commonT("cancel") || "취소"}
             </Button>
             <Button
               onClick={createFolder}
               disabled={!newFolderName.trim()}
               className="flex-1"
             >
-              만들기
+              {commonT("create") || "만들기"}
             </Button>
           </div>
         </div>
