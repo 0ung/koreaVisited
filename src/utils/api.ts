@@ -20,7 +20,7 @@ export const apiRequest = async <T>(
   };
 
   // 인증 토큰 추가
-  const token = storage.get<string>("authToken");
+  const token = storage.get<string>("authToken", "none");
 
   if (token) {
     defaultOptions.headers = {

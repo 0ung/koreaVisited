@@ -4,12 +4,15 @@ import { routing } from "./routing";
 import api from "@/axios/axiosConfig";
 import { API_PATH } from "../constants/apiPath";
 
+const translationCache: Record<string, any> = {};
+
 export default getRequestConfig(async ({ requestLocale }) => {
   // Typically corresponds to the `[locale]` segment
   const requested = await requestLocale;
   const locale = hasLocale(routing.locales, requested)
     ? requested
     : routing.defaultLocale;
+
   const messages = await fetchTranslations(locale);
   return {
     locale: locale,
@@ -17,14 +20,18 @@ export default getRequestConfig(async ({ requestLocale }) => {
   };
 });
 
-async function fetchTranslations(locale: String) {
+async function fetchTranslations(locale: string) {
+  if (translationCache[locale]) {
+    return translationCache[locale];
+  }
+
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SPRING_API_URL;
     const response = await fetch(`${baseUrl}${API_PATH.LOCALE}/${locale}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Accpet: "application/json",
+        Accept: "application/json",
       },
       cache: "force-cache",
       next: {
@@ -33,19 +40,20 @@ async function fetchTranslations(locale: String) {
       },
     });
 
-    if (!response.status) {
-      console.error("번역 요청 실패1");
+    if (!response.ok) {
+      console.error("번역 요청 실패");
+      throw new Error("Bad response");
     }
-    return response.json();
+
+    const data = await response.json();
+    console.log(data);
+    translationCache[locale] = data;
+    return data;
   } catch (error: any) {
     console.error(
       `Failed to fetch translations from Spring Boot for locale ${locale}:`,
       error
     );
-
     console.log(`Falling back to local JSON for locale: ${locale}`);
-    const fallbackMessages = (await import(`../../messages/${locale}.json`))
-      .default;
-    return fallbackMessages;
   }
 }

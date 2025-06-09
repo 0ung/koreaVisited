@@ -1,3 +1,3 @@
 export const API_PATH = {
-  LOCALE: "/locale",
+  LOCALE: "/locale/all",
 };
