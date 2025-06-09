@@ -574,5 +574,25 @@
         "developedWith": "Made with",
         "inKorea": "in Korea",
         "poweredBy": "Powered by"
+    },
+    "Home": {
+        "heroTitle": "대한민국 여행의 모든 것",
+        "heroSubtitle": "카카오, 네이버, 구글 3개 플랫폼 데이터 통합",
+        "searchPlaceholder": "장소, 음식, 관광지를 검색하세요...",
+        "search": "검색",
+        "categoriesTitle": "카테고리별 탐색",
+        "recommendedTitle": "추천 장소",
+        "realTimeTitle": "실시간 정보",
+        "viewAll": "전체보기",
+        "categories": {
+            "restaurant": "맛집",
+            "cafe": "카페",
+            "tourist": "관광지",
+            "culture": "문화",
+            "shopping": "쇼핑",
+            "nature": "자연",
+            "activity": "액티비티",
+            "hotel": "숙박"
+        }
     }
 }

@@ -1,388 +1,412 @@
+// src/app/[locale]/page.tsx - 기존 구조 기반 성능 최적화된 메인 페이지
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "@/i18n/navigation";
-import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { cn } from "@/utils/cn";
+
+// 기존 UI 컴포넌트 재사용
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 
+// 성능 최적화 유틸리티 사용 (올바른 분리)
+import { useImagePreload, performanceMonitor } from "@/utils/performance";
+import { useCachedFetch, memoryCache } from "@/utils/cache";
+
+// 동적 임포트 (기존 패턴 활용)
+const PlaceCard = dynamic(() => import("@/components/PlaceCard"), {
+  loading: () => <PlaceCardSkeleton />,
+  ssr: false,
+});
+
+const MapView = dynamic(() => import("@/components/MapView"), {
+  loading: () => <div className="h-64 bg-gray-200 rounded-lg animate-pulse" />,
+  ssr: false,
+});
+
+// 기존 타입 재사용
 interface Place {
   id: string;
-  name: string;
-  location: string;
-  image: string;
-  description: string;
-  tags: string[];
-  isPopular?: boolean;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  emoji: string;
-  description: string;
-}
-
-export default function HomePage() {
-  const t = useTranslations("HomePage");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [featuredPlaces, setFeaturedPlaces] = useState<Place[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // 데이터 로드
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        setFeaturedPlaces([
-          {
-            id: "1",
-            name: "부산 감천문화마을",
-            location: "부산 사하구",
-            image: "/images/gamcheon.jpg",
-            description:
-              "색색깔의 집들이 절벽에 다닥다닥 붙어있는 모습이 마치 레고블럭 같아요",
-            tags: ["포토존", "예술", "언덕마을"],
-            isPopular: true,
-          },
-          {
-            id: "2",
-            name: "전주 한옥마을",
-            location: "전주 완산구",
-            image: "/images/jeonju.jpg",
-            description: "한복 입고 걸으면 조선시대로 시간여행 온 기분이에요",
-            tags: ["한복체험", "전통", "먹거리"],
-          },
-          {
-            id: "3",
-            name: "제주 성산일출봉",
-            location: "제주 서귀포시",
-            image: "/images/seongsan.jpg",
-            description: "새벽에 오르면 정말 감동적인 일출을 볼 수 있어요",
-            tags: ["일출", "자연", "트레킹"],
-          },
-          {
-            id: "4",
-            name: "경주 대릉원",
-            location: "경주 중구",
-            image: "/images/daereungwon.jpg",
-            description: "고분들 사이를 걷다보면 천년의 이야기가 들려와요",
-            tags: ["역사", "고분", "산책"],
-          },
-        ]);
-
-        setCategories([
-          {
-            id: "1",
-            name: "맛집",
-            emoji: "🍜",
-            description: "현지인이 가는 진짜 맛집",
-          },
-          {
-            id: "2",
-            name: "카페",
-            emoji: "☕",
-            description: "감성 가득한 카페들",
-          },
-          {
-            id: "3",
-            name: "관광지",
-            emoji: "🏞️",
-            description: "꼭 가봐야 할 명소들",
-          },
-          {
-            id: "4",
-            name: "체험",
-            emoji: "🎎",
-            description: "특별한 경험을 만들어요",
-          },
-          {
-            id: "5",
-            name: "쇼핑",
-            emoji: "🛍️",
-            description: "기념품부터 브랜드까지",
-          },
-          {
-            id: "6",
-            name: "숙소",
-            emoji: "🏠",
-            description: "편안한 하루를 위해",
-          },
-        ]);
-      } catch (error) {
-        console.error("데이터 로드 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
-    }
+  name: { ko: string; en: string; ja: string };
+  address: { ko: string; en: string; ja: string };
+  lat: number;
+  lon: number;
+  category_std: string;
+  rating_avg: number;
+  review_count: number;
+  main_image_urls: string[];
+  recommendation_score: number;
+  crowd_index?: number;
+  platform_data: {
+    kakao?: { available: boolean; rating: number; review_count: number };
+    naver?: { available: boolean; rating: number; review_count: number };
+    google?: { available: boolean; rating: number; review_count: number };
   };
+  data_quality_score: number;
+  last_updated: string;
+}
+
+interface CategoryStats {
+  category: string;
+  count: number;
+  avg_rating: number;
+  icon: string;
+  color: string;
+}
+
+// 스켈레톤 컴포넌트 (기존 패턴)
+const PlaceCardSkeleton = () => (
+  <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+    <Skeleton variant="rectangular" className="w-full h-48" />
+    <div className="p-4 space-y-3">
+      <Skeleton variant="text" className="h-6 w-3/4" />
+      <Skeleton variant="text" className="h-4 w-full" />
+      <div className="flex justify-between items-center">
+        <Skeleton variant="text" className="h-4 w-20" />
+        <Skeleton variant="text" className="h-4 w-16" />
+      </div>
+    </div>
+  </div>
+);
+
+const CategoryCardSkeleton = () => (
+  <Card>
+    <CardContent className="p-6">
+      <div className="flex items-center gap-4">
+        <Skeleton variant="circular" className="w-12 h-12" />
+        <div className="flex-1">
+          <Skeleton variant="text" className="h-5 w-20 mb-2" />
+          <Skeleton variant="text" className="h-4 w-32" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// 히어로 섹션 컴포넌트
+const HeroSection = ({ onSearch }: { onSearch: (query: string) => void }) => {
+  const t = useTranslations("Home");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (searchQuery.trim()) {
+        onSearch(searchQuery.trim());
+      }
+    },
+    [searchQuery, onSearch]
+  );
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* 히어로 섹션 */}
-      <section className="relative bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 overflow-hidden">
-        <div className="absolute inset-0">
-          {/* 장식용 도형들 */}
-          <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-pink-200 to-pink-300 rounded-full opacity-20 animate-pulse"></div>
-          <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-blue-200 to-blue-300 rounded-full opacity-30 animate-pulse delay-1000"></div>
-          <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-gradient-to-br from-green-200 to-green-300 rounded-full opacity-25 animate-pulse delay-500"></div>
-        </div>
+    <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white py-20">
+      <div className="absolute inset-0 bg-black/20" />
+      <div className="relative container mx-auto px-4 text-center">
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">
+          {t("heroTitle")}
+        </h1>
+        <p className="text-xl md:text-2xl mb-8 text-white/90">
+          {t("heroSubtitle")}
+        </p>
 
-        <div className="relative container mx-auto px-4 py-20 sm:py-28">
-          <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-gray-900">
-              <span className="text-blue-600">{t("title")}</span>
-            </h1>
-            <p className="text-xl sm:text-2xl mb-12 text-gray-600 leading-relaxed">
-              {t("description")}
-            </p>
+        {/* 검색 바 */}
+        <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
+          <div className="flex items-center bg-white rounded-full p-2 shadow-lg">
+            <Input
+              type="text"
+              placeholder={t("searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 border-0 bg-transparent text-gray-900 text-lg"
+            />
+            <Button type="submit" className="rounded-full px-8">
+              {t("search")}
+            </Button>
+          </div>
+        </form>
 
-            {/* 메인 검색바 */}
-            <div className="max-w-3xl mx-auto mb-8">
-              <div className="flex items-center bg-white rounded-2xl shadow-lg border border-gray-200 p-2">
-                <div className="flex items-center flex-1 px-4">
-                  <svg
-                    className="w-6 h-6 text-gray-400 mr-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder={t("searchPlaceholder")}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                    className="flex-1 h-12 text-lg bg-transparent border-none outline-none placeholder:text-gray-500"
-                  />
-                </div>
-                <Button
-                  onClick={handleSearch}
-                  size="lg"
-                  className="h-12 px-8 bg-blue-600 hover:bg-blue-700 rounded-xl font-semibold flex-shrink-0"
-                >
-                  {t("searchButton")}
-                </Button>
-              </div>
-            </div>
-
-            {/* 인기 검색어 */}
-            <div className="max-w-2xl mx-auto">
-              <div className="flex flex-wrap justify-center items-center gap-3">
-                <span className="text-gray-500 text-sm font-medium">
-                  {t("popularSearches")}:
-                </span>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {[
-                    "부산 해운대",
-                    "제주도",
-                    "전주 맛집",
-                    "경복궁",
-                    "홍대 카페",
-                  ].map((keyword) => (
-                    <button
-                      key={keyword}
-                      onClick={() => {
-                        setSearchQuery(keyword);
-                        window.location.href = `/search?q=${encodeURIComponent(
-                          keyword
-                        )}`;
-                      }}
-                      className="px-4 py-2 bg-white text-gray-600 text-sm font-medium rounded-full border border-gray-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md"
-                    >
-                      {keyword}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+        {/* 통계 정보 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+            <div className="text-3xl font-bold">50,000+</div>
+            <div className="text-white/80">검증된 장소</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+            <div className="text-3xl font-bold">3개</div>
+            <div className="text-white/80">플랫폼 통합</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+            <div className="text-3xl font-bold">실시간</div>
+            <div className="text-white/80">혼잡도 정보</div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+};
 
-      {/* 카테고리 섹션 */}
+// 카테고리 섹션 컴포넌트
+const CategorySection = () => {
+  const t = useTranslations("Home");
+
+  // 캐시된 카테고리 데이터 fetch
+  const { data: categories, loading: categoriesLoading } = useCachedFetch<
+    CategoryStats[]
+  >(
+    "/api/categories/stats",
+    {},
+    600000 // 10분 캐시
+  );
+
+  const categoryIcons = useMemo(
+    () => ({
+      restaurant: { icon: "🍽️", color: "from-red-500 to-orange-500" },
+      cafe: { icon: "☕", color: "from-yellow-500 to-amber-500" },
+      tourist: { icon: "🏛️", color: "from-blue-500 to-indigo-500" },
+      culture: { icon: "🎭", color: "from-purple-500 to-pink-500" },
+      shopping: { icon: "🛍️", color: "from-green-500 to-emerald-500" },
+      nature: { icon: "🌳", color: "from-teal-500 to-cyan-500" },
+      activity: { icon: "🎢", color: "from-violet-500 to-purple-500" },
+      hotel: { icon: "🏨", color: "from-indigo-500 to-blue-500" },
+    }),
+    []
+  );
+
+  if (categoriesLoading) {
+    return (
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {t("whatAreYouLookingFor")}
-            </h2>
-            <p className="text-gray-600 text-lg">
-              {t("categoriesDescription")}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {isLoading
-              ? Array.from({ length: 6 }).map((_, index) => (
-                  <Skeleton
-                    key={index}
-                    variant="rectangular"
-                    className="h-32 rounded-2xl"
-                  />
-                ))
-              : categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    href={`/categories/${category.id}`}
-                    className="group"
-                  >
-                    <Card className="h-32 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-white border-0 shadow-sm">
-                      <CardContent className="flex flex-col items-center justify-center h-full p-4 text-center">
-                        <div className="text-4xl mb-2 group-hover:scale-110 transition-transform duration-300">
-                          {category.emoji}
-                        </div>
-                        <h3 className="font-bold text-gray-900 mb-1">
-                          {category.name}
-                        </h3>
-                        <p className="text-xs text-gray-500 leading-tight">
-                          {category.description}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+          <h2 className="text-3xl font-bold text-center mb-12">카테고리</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <CategoryCardSkeleton key={i} />
+            ))}
           </div>
         </div>
       </section>
+    );
+  }
 
-      {/* 추천 장소 */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                {t("recommendedPlaces")}
-              </h2>
-              <p className="text-gray-600 text-lg">{t("placesDescription")}</p>
-            </div>
-            <Button variant="outline" asChild className="hidden sm:block">
-              <Link href="/places">{t("viewAll")}</Link>
-            </Button>
-          </div>
+  return (
+    <section className="py-16 bg-gray-50">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl font-bold text-center mb-12">
+          {t("categoriesTitle")}
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {categories?.map((category) => {
+            const iconInfo =
+              categoryIcons[category.category as keyof typeof categoryIcons];
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {isLoading
-              ? Array.from({ length: 4 }).map((_, index) => (
-                  <Card key={index} className="overflow-hidden">
-                    <Skeleton variant="rectangular" className="h-48" />
-                    <CardContent className="p-4">
-                      <Skeleton variant="text" className="h-6 mb-2" />
-                      <Skeleton variant="text" className="h-4 mb-2 w-3/4" />
-                      <Skeleton variant="text" lines={2} />
-                    </CardContent>
-                  </Card>
-                ))
-              : featuredPlaces.map((place) => (
-                  <Link key={place.id} href={`/places/${place.id}`}>
-                    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
-                      <div className="relative h-48 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 overflow-hidden">
-                        {place.isPopular && (
-                          <div className="absolute top-3 left-3 z-10">
-                            <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                              인기
-                            </span>
-                          </div>
+            return (
+              <Link
+                key={category.category}
+                href={`/categories/${category.category}`}
+                className="group"
+              >
+                <Card className="h-full transition-all hover:shadow-lg hover:-translate-y-1">
+                  <CardContent className="p-6">
+                    <div className="text-center">
+                      <div
+                        className={cn(
+                          "w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center text-2xl",
+                          "bg-gradient-to-br",
+                          iconInfo?.color || "from-gray-400 to-gray-500"
                         )}
-                        {/* 이미지 placeholder */}
-                        <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-                          <span className="text-white text-4xl">📸</span>
-                        </div>
+                      >
+                        {iconInfo?.icon || "📍"}
                       </div>
-                      <CardContent className="p-4">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
-                          {place.name}
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {place.location}
-                        </p>
-                        <p className="text-sm text-gray-700 mb-3 leading-relaxed line-clamp-2">
-                          {place.description}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {place.tags.slice(0, 3).map((tag, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-          </div>
+                      <h3 className="font-semibold mb-2 group-hover:text-blue-600">
+                        {t(`categories.${category.category}`)}
+                      </h3>
+                      <div className="text-sm text-gray-600">
+                        <div>{category.count.toLocaleString()}개 장소</div>
+                        <div>★ {category.avg_rating.toFixed(1)}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
 
-          {/* 모바일 전체보기 버튼 */}
-          <div className="text-center mt-8 sm:hidden">
-            <Button variant="outline" asChild>
-              <Link href="/places">{t("viewAll")}</Link>
-            </Button>
+// 추천 장소 섹션
+const RecommendedPlacesSection = () => {
+  const t = useTranslations("Home");
+
+  // 캐시된 추천 장소 데이터
+  const { data: recommendedPlaces, loading: placesLoading } = useCachedFetch<
+    Place[]
+  >(
+    "/api/places/recommended?limit=8",
+    {},
+    300000 // 5분 캐시
+  );
+
+  // 이미지 프리로딩
+  const imageUrls = useMemo(
+    () =>
+      recommendedPlaces?.flatMap((place) =>
+        place.main_image_urls.slice(0, 1)
+      ) || [],
+    [recommendedPlaces]
+  );
+
+  useImagePreload(imageUrls);
+
+  const handleBookmarkToggle = useCallback(
+    async (placeId: string, isBookmarked: boolean) => {
+      try {
+        const method = isBookmarked ? "POST" : "DELETE";
+        await fetch(`/api/user/bookmarks/${placeId}`, { method });
+
+        // 캐시 무효화
+        memoryCache.delete("/api/places/recommended?limit=8:");
+      } catch (error) {
+        console.error("북마크 처리 실패:", error);
+      }
+    },
+    []
+  );
+
+  if (placesLoading) {
+    return (
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">추천 장소</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <PlaceCardSkeleton key={i} />
+            ))}
           </div>
         </div>
       </section>
+    );
+  }
 
-      {/* 여행 팁 섹션 */}
-      <section className="py-16 bg-gradient-to-br from-blue-50 to-purple-50">
+  return (
+    <section className="py-16">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between mb-12">
+          <h2 className="text-3xl font-bold">{t("recommendedTitle")}</h2>
+          <Link href="/search?sort=recommendation">
+            <Button variant="outline">{t("viewAll")}</Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {recommendedPlaces?.map((place, index) => (
+            <PlaceCard
+              key={place.id}
+              place={place}
+              locale="ko"
+              variant={index < 2 ? "featured" : "default"}
+              showRecommendationScore
+              showPlatformIndicator
+              showDataQuality
+              onBookmarkToggle={handleBookmarkToggle}
+              priority={index < 4} // 첫 4개 이미지 우선 로딩
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// 메인 페이지 컴포넌트
+export default function HomePage() {
+  const t = useTranslations("Home");
+
+  // 성능 측정
+  useEffect(() => {
+    performanceMonitor.mark("HomePage-start");
+
+    return () => {
+      performanceMonitor.mark("HomePage-end");
+      performanceMonitor.measure(
+        "HomePage-render",
+        "HomePage-start",
+        "HomePage-end"
+      );
+    };
+  }, []);
+
+  const handleSearch = useCallback((query: string) => {
+    // 검색 히스토리 저장
+    if (typeof window !== "undefined") {
+      const searchHistory = JSON.parse(
+        localStorage.getItem("searchHistory") || "[]"
+      );
+      const updatedHistory = [
+        query,
+        ...searchHistory.filter((q: string) => q !== query),
+      ].slice(0, 10);
+      localStorage.setItem("searchHistory", JSON.stringify(updatedHistory));
+
+      // 검색 페이지로 이동
+      window.location.href = `/search?q=${encodeURIComponent(query)}`;
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen">
+      {/* 히어로 섹션 */}
+      <HeroSection onSearch={handleSearch} />
+
+      {/* 카테고리 섹션 */}
+      <CategorySection />
+
+      {/* 추천 장소 섹션 */}
+      <RecommendedPlacesSection />
+
+      {/* 실시간 정보 섹션 */}
+      <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {t("travelTips")}
-            </h2>
-            <p className="text-gray-600 text-lg">{t("tipsDescription")}</p>
-          </div>
+          <h2 className="text-3xl font-bold text-center mb-12">
+            {t("realTimeTitle")}
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="text-center p-6 bg-white rounded-2xl shadow-sm">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🚌</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {t("tips.transport")}
-              </h3>
-              <p className="text-gray-600">{t("tips.transportDesc")}</p>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* 혼잡도 지도 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>실시간 혼잡도</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <MapView
+                    places={[]}
+                    showCrowdData={true}
+                    className="rounded-lg"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="text-center p-6 bg-white rounded-2xl shadow-sm">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🍱</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {t("tips.food")}
-              </h3>
-              <p className="text-gray-600">{t("tips.foodDesc")}</p>
-            </div>
-
-            <div className="text-center p-6 bg-white rounded-2xl shadow-sm">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">💰</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {t("tips.money")}
-              </h3>
-              <p className="text-gray-600">{t("tips.moneyDesc")}</p>
-            </div>
+            {/* 인기 급상승 장소 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>인기 급상승</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* 이 부분은 실시간 데이터로 채워질 예정 */}
+                  <div className="text-center text-gray-500 py-8">
+                    실시간 인기 장소 로딩 중...
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

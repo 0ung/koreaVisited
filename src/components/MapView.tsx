@@ -1,9 +1,10 @@
+// src/components/MapView.tsx - 기존 코드 확장
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { cn } from "@/utils/cn";
 
-// 타입 정의
+// 기존 타입 확장
 interface Place {
   id: string;
   name: { ko: string; en: string; ja: string };
@@ -26,6 +27,7 @@ interface Place {
   data_quality_score: number;
 }
 
+// Props 확장
 interface MapViewProps {
   places: Place[];
   onPlaceSelect?: (place: Place) => void;
@@ -34,31 +36,30 @@ interface MapViewProps {
   center?: { lat: number; lng: number };
   showClusters?: boolean;
   showTraffic?: boolean;
+  showCrowdData?: boolean; // 새로 추가
   className?: string;
 }
 
 interface MapMarker {
   place: Place;
-  x: number; // 화면상 x 좌표
-  y: number; // 화면상 y 좌표
+  x: number;
+  y: number;
   cluster?: boolean;
   clusterCount?: number;
 }
 
-// 마커 클러스터링 함수
+// 기존 마커 클러스터링 함수 (그대로 유지)
 const clusterMarkers = (places: Place[], zoom: number): MapMarker[] => {
-  const clusterDistance = Math.max(50, 100 - zoom * 5); // 줌 레벨에 따른 클러스터 거리
+  const clusterDistance = Math.max(50, 100 - zoom * 5);
   const markers: MapMarker[] = [];
   const processed = new Set<string>();
 
   places.forEach((place) => {
     if (processed.has(place.id)) return;
 
-    // 화면 좌표 계산 (실제로는 지도 API의 projection 사용)
-    const x = ((place.lon - 126.8) / 0.4) * 100; // 대략적인 계산
+    const x = ((place.lon - 126.8) / 0.4) * 100;
     const y = ((37.7 - place.lat) / 0.3) * 100;
 
-    // 근처 장소들 찾기
     const nearbyPlaces = places.filter((otherPlace) => {
       if (processed.has(otherPlace.id) || otherPlace.id === place.id)
         return false;
@@ -73,7 +74,6 @@ const clusterMarkers = (places: Place[], zoom: number): MapMarker[] => {
     });
 
     if (nearbyPlaces.length > 0) {
-      // 클러스터 생성
       nearbyPlaces.forEach((p) => processed.add(p.id));
       processed.add(place.id);
 
@@ -85,7 +85,6 @@ const clusterMarkers = (places: Place[], zoom: number): MapMarker[] => {
         clusterCount: nearbyPlaces.length + 1,
       });
     } else {
-      // 단일 마커
       processed.add(place.id);
       markers.push({
         place,
@@ -99,16 +98,66 @@ const clusterMarkers = (places: Place[], zoom: number): MapMarker[] => {
   return markers;
 };
 
-// 마커 컴포넌트
+// 혼잡도 오버레이 컴포넌트 (새로 추가)
+const CrowdOverlay = memo(({ places }: { places: Place[] }) => {
+  const crowdHeatmapData = useMemo(() => {
+    return places
+      .filter((place) => place.crowd_index !== undefined)
+      .map((place) => ({
+        x: Math.max(5, Math.min(95, ((place.lon - 126.8) / 0.4) * 100)),
+        y: Math.max(5, Math.min(95, ((37.7 - place.lat) / 0.3) * 100)),
+        intensity: place.crowd_index!,
+        id: place.id,
+      }));
+  }, [places]);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {crowdHeatmapData.map((point) => (
+        <div
+          key={point.id}
+          className="absolute transform -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: `${point.x}%`,
+            top: `${point.y}%`,
+            width: "40px",
+            height: "40px",
+          }}
+        >
+          <div
+            className={cn(
+              "w-full h-full rounded-full opacity-40",
+              point.intensity <= 30
+                ? "bg-green-400"
+                : point.intensity <= 70
+                ? "bg-yellow-400"
+                : "bg-red-400"
+            )}
+            style={{
+              filter: "blur(8px)",
+              transform: `scale(${Math.max(0.5, point.intensity / 100)})`,
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+});
+
+CrowdOverlay.displayName = "CrowdOverlay";
+
+// 마커 컴포넌트 확장 (혼잡도 표시 추가)
 const MapMarker = memo(
   ({
     marker,
     isSelected,
     onClick,
+    showCrowdData,
   }: {
     marker: MapMarker;
     isSelected: boolean;
     onClick: () => void;
+    showCrowdData?: boolean;
   }) => {
     const getCategoryColor = (category: string) => {
       const colors = {
@@ -124,17 +173,26 @@ const MapMarker = memo(
       return colors[category as keyof typeof colors] || "bg-gray-500";
     };
 
+    const getCrowdBorderColor = (crowdIndex?: number) => {
+      if (!showCrowdData || crowdIndex === undefined) return "border-white";
+
+      if (crowdIndex <= 30) return "border-green-400";
+      if (crowdIndex <= 70) return "border-yellow-400";
+      return "border-red-400";
+    };
+
     if (marker.cluster) {
       return (
         <button
           onClick={onClick}
           className={cn(
             "absolute transform -translate-x-1/2 -translate-y-1/2 z-10",
-            "bg-blue-600 text-white rounded-full border-2 border-white shadow-lg",
+            "bg-blue-600 text-white rounded-full border-2 shadow-lg",
             "min-w-[32px] h-8 px-2 text-sm font-bold",
             "hover:bg-blue-700 transition-colors",
             "flex items-center justify-center",
-            isSelected && "ring-2 ring-blue-300 scale-110"
+            isSelected && "ring-2 ring-blue-300 scale-110",
+            getCrowdBorderColor(marker.place.crowd_index)
           )}
           style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
           title={`${marker.clusterCount}개 장소`}
@@ -145,45 +203,60 @@ const MapMarker = memo(
     }
 
     return (
-      <button
-        onClick={onClick}
-        className={cn(
-          "absolute transform -translate-x-1/2 -translate-y-1/2 z-10",
-          "w-8 h-8 rounded-full border-2 border-white shadow-lg",
-          "hover:scale-110 transition-transform",
-          getCategoryColor(marker.place.category_std),
-          isSelected && "ring-2 ring-blue-300 scale-125"
-        )}
-        style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
-        title={marker.place.name.ko}
-      >
-        <span className="text-white text-xs font-bold">
-          {marker.place.category_std === "restaurant"
-            ? "🍽️"
-            : marker.place.category_std === "cafe"
-            ? "☕"
-            : marker.place.category_std === "tourist"
-            ? "🏛️"
-            : marker.place.category_std === "culture"
-            ? "🎭"
-            : marker.place.category_std === "shopping"
-            ? "🛍️"
-            : marker.place.category_std === "nature"
-            ? "🌳"
-            : marker.place.category_std === "activity"
-            ? "🎢"
-            : marker.place.category_std === "hotel"
-            ? "🏨"
-            : "📍"}
-        </span>
-      </button>
+      <div className="relative">
+        <button
+          onClick={onClick}
+          className={cn(
+            "absolute transform -translate-x-1/2 -translate-y-1/2 z-10",
+            "w-8 h-8 rounded-full border-2 shadow-lg",
+            "hover:scale-110 transition-transform",
+            getCategoryColor(marker.place.category_std),
+            isSelected && "ring-2 ring-blue-300 scale-125",
+            getCrowdBorderColor(marker.place.crowd_index)
+          )}
+          style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+          title={marker.place.name.ko}
+        >
+          <span className="text-white text-xs font-bold">
+            {marker.place.category_std === "restaurant"
+              ? "🍽️"
+              : marker.place.category_std === "cafe"
+              ? "☕"
+              : marker.place.category_std === "tourist"
+              ? "🏛️"
+              : marker.place.category_std === "culture"
+              ? "🎭"
+              : marker.place.category_std === "shopping"
+              ? "🛍️"
+              : marker.place.category_std === "nature"
+              ? "🌳"
+              : marker.place.category_std === "activity"
+              ? "🎢"
+              : marker.place.category_std === "hotel"
+              ? "🏨"
+              : "📍"}
+          </span>
+        </button>
+
+        {/* 혼잡도 펄스 효과 */}
+        {showCrowdData &&
+          marker.place.crowd_index !== undefined &&
+          marker.place.crowd_index > 70 && (
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+            >
+              <div className="w-12 h-12 bg-red-400 rounded-full opacity-30 animate-ping" />
+            </div>
+          )}
+      </div>
     );
   }
 );
 
 MapMarker.displayName = "MapMarker";
 
-// 장소 정보 팝업
+// 기존 PlacePopup 컴포넌트 (그대로 유지)
 const PlacePopup = memo(
   ({ place, onClose }: { place: Place; onClose: () => void }) => {
     const getPlatformCount = (platformData: Place["platform_data"]) => {
@@ -316,7 +389,7 @@ const PlacePopup = memo(
 
 PlacePopup.displayName = "PlacePopup";
 
-// 메인 MapView 컴포넌트
+// 메인 MapView 컴포넌트 확장
 const MapView = memo<MapViewProps>(
   ({
     places,
@@ -326,12 +399,13 @@ const MapView = memo<MapViewProps>(
     center = { lat: 37.5665, lng: 126.978 },
     showClusters = true,
     showTraffic = false,
+    showCrowdData = false, // 새로 추가된 props
     className,
   }) => {
     const [selectedMarker, setSelectedMarker] = useState<Place | null>(null);
     const [mapZoom, setMapZoom] = useState(zoom);
 
-    // 마커 클러스터링
+    // 기존 마커 클러스터링 로직 유지
     const markers = useMemo(() => {
       if (!showClusters) {
         return places.map((place) => ({
@@ -344,7 +418,6 @@ const MapView = memo<MapViewProps>(
       return clusterMarkers(places, mapZoom);
     }, [places, mapZoom, showClusters]);
 
-    // 마커 클릭 핸들러
     const handleMarkerClick = useCallback(
       (marker: MapMarker) => {
         setSelectedMarker(marker.place);
@@ -353,15 +426,13 @@ const MapView = memo<MapViewProps>(
       [onPlaceSelect]
     );
 
-    // 줌 컨트롤
     const handleZoomIn = () => setMapZoom((prev) => Math.min(18, prev + 1));
     const handleZoomOut = () => setMapZoom((prev) => Math.max(8, prev - 1));
 
     return (
       <div className={cn("relative bg-gray-100 overflow-hidden", className)}>
-        {/* 지도 배경 */}
+        {/* 기존 지도 배경 */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-green-50 to-yellow-50">
-          {/* 가상의 도로 패턴 */}
           <svg
             className="absolute inset-0 w-full h-full opacity-20"
             viewBox="0 0 100 100"
@@ -382,7 +453,7 @@ const MapView = memo<MapViewProps>(
             <rect width="100" height="100" fill="url(#roads)" />
           </svg>
 
-          {/* 지역 구분 (서울 중심) */}
+          {/* 기존 지역 표시 */}
           <div className="absolute top-4 left-4 bg-white/80 rounded px-2 py-1 text-xs font-medium">
             서울특별시
           </div>
@@ -396,21 +467,25 @@ const MapView = memo<MapViewProps>(
             마포구
           </div>
 
-          {/* 한강 표시 */}
+          {/* 한강 */}
           <div className="absolute top-1/2 left-0 right-0 h-3 bg-blue-300/40 transform -translate-y-1/2 -rotate-12"></div>
         </div>
 
-        {/* 마커들 */}
+        {/* 혼잡도 오버레이 (새로 추가) */}
+        {showCrowdData && <CrowdOverlay places={places} />}
+
+        {/* 마커들 (showCrowdData props 추가) */}
         {markers.map((marker, index) => (
           <MapMarker
             key={`marker-${marker.place.id}-${index}`}
             marker={marker}
             isSelected={selectedMarker?.id === marker.place.id}
             onClick={() => handleMarkerClick(marker)}
+            showCrowdData={showCrowdData}
           />
         ))}
 
-        {/* 줌 컨트롤 */}
+        {/* 기존 줌 컨트롤 */}
         <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg overflow-hidden z-10">
           <button
             onClick={handleZoomIn}
@@ -452,30 +527,61 @@ const MapView = memo<MapViewProps>(
           </button>
         </div>
 
-        {/* 범례 */}
+        {/* 확장된 범례 (혼잡도 추가) */}
         <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 z-10">
-          <h4 className="text-xs font-semibold mb-2">카테고리</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span>맛집</span>
+          <h4 className="text-xs font-semibold mb-2">범례</h4>
+          <div className="space-y-2">
+            {/* 카테고리 */}
+            <div>
+              <div className="text-xs font-medium text-gray-700 mb-1">
+                카테고리
+              </div>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span>맛집</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                  <span>카페</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span>관광</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span>자연</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-              <span>카페</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span>관광</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span>자연</span>
-            </div>
+
+            {/* 혼잡도 범례 (조건부 표시) */}
+            {showCrowdData && (
+              <div className="border-t pt-2">
+                <div className="text-xs font-medium text-gray-700 mb-1">
+                  혼잡도
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <span>여유</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                    <span>보통</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                    <span>혼잡</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 통계 정보 */}
+        {/* 기존 통계 정보 */}
         <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 z-10">
           <div className="text-sm">
             <div className="font-semibold text-gray-900 mb-1">
@@ -486,11 +592,12 @@ const MapView = memo<MapViewProps>(
               {showClusters
                 ? ` 클러스터: ${markers.filter((m) => m.cluster).length}개`
                 : " 개별 마커"}
+              {showCrowdData && <span> | 혼잡도 표시: ON</span>}
             </div>
           </div>
         </div>
 
-        {/* 선택된 장소 정보 팝업 */}
+        {/* 기존 선택된 장소 팝업 */}
         {selectedMarker && (
           <PlacePopup
             place={selectedMarker}
@@ -498,7 +605,7 @@ const MapView = memo<MapViewProps>(
           />
         )}
 
-        {/* 로딩 오버레이 (장소가 없을 때) */}
+        {/* 기존 로딩 오버레이 */}
         {places.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 z-20">
             <div className="text-center">
