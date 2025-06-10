@@ -7,7 +7,9 @@
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import React, { useState } from "react";
+import Link from "next/link";
 import { API_PATH } from "@/constants/apiPath";
+import PasswordInput from "@/components/common/PasswordInput";
 interface SignupFormData {
   email: string;
   password: string;
@@ -36,8 +38,6 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   /* ──────────────────── util: email / password ────────────────── */
   const validateEmail = (email: string) =>
@@ -225,24 +225,18 @@ export default function SignupPage() {
               {t("password")}
             </label>
             <div className="relative mt-1">
-              <input
+              <PasswordInput
                 id="password"
                 name="password"
-                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder={t("passwordPlaceholder")}
                 className="block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-12 px-4 text-base"
+                showLabel="👁️"
+                hideLabel="🙈"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </button>
             </div>
 
             {formData.password && (
@@ -267,24 +261,18 @@ export default function SignupPage() {
               {t("confirmPassword")}
             </label>
             <div className="relative mt-1">
-              <input
+              <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
                 placeholder={t("confirmPasswordPlaceholder")}
                 className="block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-12 px-4 text-base"
+                showLabel="👁️"
+                hideLabel="🙈"
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
-              >
-                {showConfirmPassword ? "🙈" : "👁️"}
-              </button>
             </div>
             {formData.confirmPassword &&
               formData.password !== formData.confirmPassword && (
@@ -327,12 +315,12 @@ export default function SignupPage() {
               />
               <span>
                 {t("agreeToTerms")}{" "}
-                <a
+                <Link
                   href={`/${locale}/terms`}
                   className="text-blue-600 hover:underline"
                 >
                   {t("termsOfService")}
-                </a>
+                </Link>
               </span>
             </label>
 
@@ -346,12 +334,12 @@ export default function SignupPage() {
               />
               <span>
                 {t("agreeToPrivacy")}{" "}
-                <a
+                <Link
                   href={`/${locale}/privacy`}
                   className="text-blue-600 hover:underline"
                 >
                   {t("privacyPolicy")}
-                </a>
+                </Link>
               </span>
             </label>
           </div>
@@ -393,12 +381,12 @@ export default function SignupPage() {
           {/* 로그인 링크 */}
           <p className="text-center text-sm text-gray-600">
             {t("hasAccount")}{" "}
-            <a
+            <Link
               href={`/${locale}/login`}
               className="font-medium text-blue-600 hover:underline"
             >
               {t("login")}
-            </a>
+            </Link>
           </p>
         </form>
       </div>

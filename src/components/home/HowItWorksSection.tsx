@@ -2,13 +2,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-
-interface Step {
-  number: string;
-  title: string;
-  description: string;
-  icon: string;
-}
+import type { Step } from "@/types";
 
 export function HowItWorksSection() {
   const homeT = useTranslations("Home");

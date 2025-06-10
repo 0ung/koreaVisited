@@ -4,29 +4,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/utils/cn";
-
-// 기존 타입 확장
-interface Place {
-  id: string;
-  name: { ko: string; en: string; ja: string };
-  address: { ko: string; en: string; ja: string };
-  lat: number;
-  lon: number;
-  category_std: string;
-  rating_avg: number;
-  review_count: number;
-  main_image_urls: string[];
-  recommendation_score: number;
-  crowd_index?: number;
-  distance?: number;
-  price_level?: number;
-  platform_data: {
-    kakao?: { available: boolean; rating: number; review_count: number };
-    naver?: { available: boolean; rating: number; review_count: number };
-    google?: { available: boolean; rating: number; review_count: number };
-  };
-  data_quality_score: number;
-}
+import type { Place } from "@/types";
 
 // Props 확장
 interface MapViewProps {

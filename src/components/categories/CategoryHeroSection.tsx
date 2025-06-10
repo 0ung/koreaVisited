@@ -1,20 +1,7 @@
 // src/components/categories/CategoryHeroSection.tsx
 import { useTranslations } from "next-intl";
 import { cn } from "@/utils/cn";
-
-interface CategoryInfo {
-  id: string;
-  name: { ko: string; en: string; ja: string };
-  description: { ko: string; en: string; ja: string };
-  icon: string;
-  gradient: string;
-}
-
-interface CategoryStats {
-  total_places: number;
-  avg_rating: number;
-  total_reviews: number;
-}
+import type { CategoryInfo, CategoryStats } from "@/types";
 
 interface CategoryHeroSectionProps {
   categoryInfo: CategoryInfo;

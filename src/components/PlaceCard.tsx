@@ -7,33 +7,7 @@ import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
-
-// 기존 타입 확장 (ETL 데이터 구조)
-interface Place {
-  id: string;
-  name: { ko: string; en: string; ja: string };
-  address: { ko: string; en: string; ja: string };
-  lat: number;
-  lon: number;
-  rating_avg: number;
-  review_count: number;
-  category_std: string;
-  main_image_urls: string[];
-  recommendation_score: number;
-  platform_data: {
-    kakao?: { rating: number; review_count: number; available: boolean };
-    naver?: { rating: number; review_count: number; available: boolean };
-    google?: { rating: number; review_count: number; available: boolean };
-  };
-  last_updated: string;
-  data_quality_score: number;
-  crowd_index?: number;
-  ugc_summary?: {
-    positive_count: number;
-    negative_count: number;
-    recent_tags: string[];
-  };
-}
+import type { Place } from "@/types";
 
 interface PlaceCardProps {
   place: Place;
