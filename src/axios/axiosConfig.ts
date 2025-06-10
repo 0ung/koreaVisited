@@ -1,67 +1,49 @@
+// axios/axiosConfig.ts - 스마트한 세션 기반
 import axios from "axios";
 
 const api = axios.create({
   baseURL:
     process.env.NEXT_PUBLIC_SPRING_API_URL || "http://localhost:8080/api",
   timeout: 10000,
-  withCredentials: true, // 쿠키 자동 전송
+  withCredentials: true, // JSESSIONID 쿠키 자동 전송/수신
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// 요청 인터셉터 - accessToken 자동 추가
+// 요청 인터셉터
 api.interceptors.request.use(
   (config) => {
-    if (typeof window !== "undefined") {
-      const accessToken = localStorage.getItem("accessToken");
-      if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`;
-      }
-    }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// 응답 인터셉터 - 401 시 토큰 갱신
+// 응답 인터셉터 - 스마트한 401 처리
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    if (error.response?.status === 401) {
+      // /auth/me나 /auth/login 요청이 아닌 경우에만 리다이렉트
+      const isAuthCheck = error.config?.url?.includes("/auth/me");
+      const isLoginRequest = error.config?.url?.includes("/auth/login");
+      const isPublicRoute = error.config?.url?.includes("/auth/");
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        // Spring Boot refresh 엔드포인트 호출
-        const response = await axios.post(
-          `${process.env.NEXT_PUBLIC_SPRING_API_URL}/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
-
-        const { accessToken } = response.data;
-
-        // localStorage에 새 토큰 저장
+      if (!isAuthCheck && !isLoginRequest && !isPublicRoute) {
+        // 인증이 필요한 API 호출에서만 리다이렉트
         if (typeof window !== "undefined") {
-          localStorage.setItem("accessToken", accessToken);
-        }
+          const currentPath = window.location.pathname;
+          const locale = currentPath.split("/")[1] || "ko";
 
-        // 원래 요청 재시도
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        // refresh 실패 시 로그아웃
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("accessToken");
-          document.cookie =
-            "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-          window.location.href = "/login";
+          // 이미 로그인 페이지에 있다면 리다이렉트하지 않음
+          if (!currentPath.includes("/login")) {
+            window.location.href = `/${locale}/login`;
+          }
         }
-        return Promise.reject(refreshError);
       }
     }
-
     return Promise.reject(error);
   }
 );
-//테스트
+
 export default api;

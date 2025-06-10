@@ -3,6 +3,8 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl"; // 수정: use-intl -> next-intl
+import api from "@/axios/axiosConfig";
+import { API_PATH } from "@/constants/apiPath";
 
 interface LoginFormData {
   email: string;
@@ -14,6 +16,7 @@ export default function LoginPage() {
   const locale = params.locale as string;
   const t = useTranslations("Login");
   const common = useTranslations("Common"); // 수정: common -> Common (대소문자 일치)
+  const API_BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8080/api";
 
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
@@ -57,23 +60,23 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // TODO: API 호출 구현
-      console.log("로그인 데이터:", formData);
+      const response = await api.post(`${API_BASE}${API_PATH.LOGIN}`, {
+        email: formData.email,
+        password: formData.password,
+      });
 
-      // 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      console.log(response);
 
-      // 성공 시 메인 페이지로 이동
-      window.location.href = `/${locale}`;
+      if (response.status == 200) {
+        console.log("요청 성공");
+        window.location.href = `/${locale}`;
+      }
     } catch (err) {
+      // 성공 시 메인 페이지로 이동
       setError(t("loginFailed"));
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSocialLogin = (provider: string) => {
-    console.log(`${provider} 로그인 시도`);
   };
 
   return (
@@ -240,20 +243,6 @@ export default function LoginPage() {
 
             {/* 기억하기 & 비밀번호 찾기 */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label
-                  htmlFor="remember-me"
-                  className="ml-2 block text-sm text-gray-700"
-                >
-                  {t("rememberMe")}
-                </label>
-              </div>
               <div className="text-sm">
                 <a
                   href={`/${locale}/forgot-password`}

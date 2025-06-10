@@ -6,10 +6,12 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/utils/cn";
+import api from "@/axios/axiosConfig";
+import { API_PATH } from "@/constants/apiPath";
 
 export interface User {
   id: string;
-  name: string;
+  nickname: string;
   email: string;
   avatar?: string;
   role?: string;
@@ -59,11 +61,11 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
   }, [isOpen]);
 
   const handleLogout = async () => {
+    const url =
+      process.env.NEXT_PUBLIC_SPRING_API_URL || "http://localhost:8080/api";
     try {
-      // 로그아웃 로직
-      await fetch("/api/auth/logout", { method: "POST" });
-      // 페이지 새로고침 또는 리다이렉트
-      window.location.href = "/";
+      await api.post(`${url}${API_PATH.LOGOUT}`);
+      window.location.href = "/ko";
     } catch (error) {
       console.error("로그아웃 실패:", error);
     }
@@ -151,15 +153,15 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
           {user.avatar ? (
             <img
               src={user.avatar}
-              alt={user.name}
+              alt={user.nickname}
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (
-            user.name.charAt(0).toUpperCase()
+            user.nickname.charAt(0).toUpperCase()
           )}
         </div>
         <span className="hidden md:block text-sm font-medium text-gray-700">
-          {user.name}
+          {user.nickname}
         </span>
         <svg
           className={cn(
@@ -184,7 +186,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
         <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
           {/* 사용자 정보 */}
           <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-sm font-medium text-gray-900">{user.name}</p>
+            <p className="text-sm font-medium text-gray-900">{user.nickname}</p>
             <p className="text-sm text-gray-500 truncate">{user.email}</p>
             {user.role && (
               <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/context/AuthContext"; // 실제 AuthContext 사용
 
 // 동적 임포트로 코드 스플리팅
 const LanguageSwitcher = dynamic(() => import("./LanguageSwitcher"), {
@@ -35,14 +36,6 @@ interface NavItem {
   requiresAuth?: boolean;
   showOnMobile?: boolean;
   isAdminOnly?: boolean;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role?: string;
 }
 
 // 향상된 검색바 컴포넌트
@@ -142,23 +135,10 @@ const SearchBar: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   );
 };
 
-// 임시 인증 컨텍스트 (실제로는 AuthContext 사용)
-const useAuth = () => {
-  const [user] = useState<User | null>({
-    id: "123",
-    name: "여행러버",
-    email: "user@example.com",
-    role: "user", // admin | user
-  });
-  const [isAuthenticated] = useState(false); // 실제로는 true/false 토글
-
-  return { user, isAuthenticated };
-};
-
 export default function Header() {
   const t = useTranslations("Header");
   const pathname = usePathname();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth(); // 실제 인증 상태 사용
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -214,7 +194,7 @@ export default function Header() {
     };
   }, [isMenuOpen]);
 
-  // 네비게이션 아이템 정의 (새 페이지들 추가)
+  // 네비게이션 아이템 정의
   const navItems: NavItem[] = useMemo(
     () => [
       {
@@ -297,7 +277,6 @@ export default function Header() {
         ),
         requiresAuth: true,
         showOnMobile: true,
-        badge: 3, // 예시 배지
       },
       {
         href: "/profile",
@@ -412,8 +391,8 @@ export default function Header() {
         return false;
       }
 
-      // 관리자 전용 아이템
-      if (item.isAdminOnly && (!user || user.role !== "admin")) {
+      // 관리자 전용 아이템 (실제 user 객체의 role 확인)
+      if (item.isAdminOnly && (!user || user.role !== "ADMIN")) {
         return false;
       }
 
@@ -425,6 +404,37 @@ export default function Header() {
   const mobileNavItems = useMemo(() => {
     return visibleNavItems.filter((item) => item.showOnMobile);
   }, [visibleNavItems]);
+
+  // 로딩 중이면 스켈레톤 표시
+  if (isLoading) {
+    return (
+      <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100">
+        <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex-shrink-0">
+              <Link
+                href="/"
+                className="flex items-center space-x-2 text-xl font-bold text-blue-600"
+              >
+                <svg
+                  className="w-8 h-8"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                <span className="hidden sm:block">TravelKorea</span>
+              </Link>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Skeleton variant="rectangular" width={200} height={32} />
+              <Skeleton variant="circular" width={32} height={32} />
+            </div>
+          </div>
+        </nav>
+      </header>
+    );
+  }
 
   return (
     <>
@@ -476,11 +486,6 @@ export default function Header() {
                   >
                     {item.icon}
                     <span>{t(item.labelKey)}</span>
-                    {item.badge && item.badge > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 ml-1">
-                        {item.badge > 99 ? "99+" : item.badge}
-                      </span>
-                    )}
                   </Link>
                 </Button>
               ))}
@@ -627,11 +632,6 @@ export default function Header() {
                       >
                         {item.icon}
                         <span className="text-base">{t(item.labelKey)}</span>
-                        {item.badge && item.badge > 0 && (
-                          <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 ml-auto">
-                            {item.badge > 99 ? "99+" : item.badge}
-                          </span>
-                        )}
                       </Link>
                     </Button>
                   ))}
