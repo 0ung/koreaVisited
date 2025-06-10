@@ -15,9 +15,6 @@ import {
 } from "@/components/home";
 
 export default function HomePage() {
-  const homeT = useTranslations("Home");
-  const commonT = useTranslations("Common");
-
   // 성능 측정
   useEffect(() => {
     performanceMonitor.mark("HomePage-start");
