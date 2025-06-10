@@ -38,7 +38,7 @@ interface ContactOption {
 }
 
 export default function HelpPage() {
-  const t = useTranslations("HelpPage");
+  const t = useTranslations("Help");
   const params = useParams();
   const locale = params.locale as string;
 
@@ -60,71 +60,65 @@ export default function HelpPage() {
         const mockFAQs: FAQItem[] = [
           {
             id: "1",
-            question: "회원가입은 어떻게 하나요?",
-            answer:
-              "상단 우측의 '회원가입' 버튼을 클릭하거나, 이메일 또는 소셜 계정(구글, 카카오, 네이버)을 통해 간편하게 가입할 수 있습니다. 가입 후 이메일 인증을 완료하시면 모든 기능을 이용하실 수 있습니다.",
+            question: t("signupQuestion"),
+            answer: t("signupAnswer"),
             category: "account",
             helpful: 45,
-            tags: ["회원가입", "계정", "소셜로그인"],
+            tags: [t("signupTag"), t("accountTag"), t("socialLoginTag")],
           },
           {
             id: "2",
-            question: "북마크한 장소는 어디에서 확인할 수 있나요?",
-            answer:
-              "로그인 후 상단 메뉴의 '북마크' 또는 프로필 메뉴에서 '내 북마크'를 선택하시면 저장한 모든 장소를 확인할 수 있습니다. 폴더별로 정리하거나 메모를 추가할 수도 있습니다.",
+            question: t("bookmarkQuestion"),
+            answer: t("bookmarkAnswer"),
             category: "features",
             helpful: 32,
-            tags: ["북마크", "저장", "폴더"],
+            tags: [t("bookmarkTag"), t("saveTag"), t("folderTag")],
           },
           {
             id: "3",
-            question: "실시간 혼잡도는 어떻게 측정되나요?",
-            answer:
-              "다양한 데이터 소스(이동통신사 데이터, 소셜미디어 체크인, 사용자 제보 등)를 AI로 분석하여 실시간 혼잡도를 예측합니다. 정확도 향상을 위해 지속적으로 알고리즘을 개선하고 있습니다.",
+            question: t("crowdQuestion"),
+            answer: t("crowdAnswer"),
             category: "features",
             helpful: 28,
-            tags: ["혼잡도", "실시간", "AI"],
+            tags: [t("crowdTag"), t("realtimeTag"), t("aiTag")],
           },
           {
             id: "4",
-            question: "언어 설정을 변경하려면?",
-            answer:
-              "상단 메뉴의 언어 선택 버튼(KR/EN/JP)을 클릭하거나, 설정 페이지에서 기본 언어를 변경할 수 있습니다. 현재 한국어, 영어, 일본어를 지원합니다.",
+            question: t("languageQuestion"),
+            answer: t("languageAnswer"),
             category: "settings",
             helpful: 19,
-            tags: ["언어", "설정", "다국어"],
+            tags: [t("languageTag"), t("settingsTag"), t("multilingualTag")],
           },
           {
             id: "5",
-            question: "개인정보는 어떻게 보호되나요?",
-            answer:
-              "모든 개인정보는 암호화되어 안전하게 저장되며, GDPR 및 개인정보보호법을 준수합니다. 사용자가 직접 공개 설정을 조정할 수 있으며, 언제든 데이터 삭제를 요청할 수 있습니다.",
+            question: t("privacyQuestion"),
+            answer: t("privacyAnswer"),
             category: "privacy",
             helpful: 41,
-            tags: ["개인정보", "보안", "GDPR"],
+            tags: [t("personalInfoTag"), t("securityTag"), t("gdprTag")],
           },
           {
             id: "6",
-            question: "오프라인에서도 사용할 수 있나요?",
-            answer:
-              "북마크한 장소의 기본 정보는 오프라인에서도 확인할 수 있습니다. 설정에서 '오프라인 모드'를 활성화하면 자주 방문하는 지역의 데이터를 미리 다운로드할 수 있습니다.",
+            question: t("offlineQuestion"),
+            answer: t("offlineAnswer"),
             category: "features",
             helpful: 15,
-            tags: ["오프라인", "다운로드", "기능"],
+            tags: [t("offlineTag"), t("downloadTag"), t("featureTag")],
           },
         ];
 
         setFAQItems(mockFAQs);
         setSearchResults(mockFAQs);
       } catch (error) {
-        console.error("FAQ 데이터 로드 실패:", error);
+        console.error(t("faqLoadError"), error);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadFAQData();
-  }, []);
+  }, [t]);
 
   // 검색 및 필터링
   useEffect(() => {
@@ -167,7 +161,7 @@ export default function HelpPage() {
         )
       );
     } catch (error) {
-      console.error("투표 실패:", error);
+      console.error(t("voteError"), error);
     }
   };
 
@@ -423,7 +417,8 @@ export default function HelpPage() {
                 <CardTitle className="flex items-center justify-between">
                   {t("frequentlyAsked")}
                   <span className="text-sm font-normal text-gray-500">
-                    {searchResults.length}개 결과
+                    {searchResults.length}
+                    {t("resultsCount")}
                   </span>
                 </CardTitle>
               </CardHeader>
@@ -514,7 +509,7 @@ export default function HelpPage() {
 
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm text-gray-500">
-                                  도움이 되었나요?
+                                  {t("wasHelpful")}
                                 </span>
                                 <Button
                                   size="sm"
@@ -676,8 +671,7 @@ export default function HelpPage() {
                               ) {
                                 window.location.href = option.action;
                               } else if (option.action === "chat") {
-                                // 채팅 창 열기 로직
-                                console.log("채팅 창 열기");
+                                console.log(t("chatAction"));
                               }
                             }}
                           >

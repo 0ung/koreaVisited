@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/utils/cn";
@@ -23,6 +24,7 @@ export default function ImageGallery({
   autoSlide = false,
   autoSlideInterval = 5000,
 }: ImageGalleryProps) {
+  const t = useTranslations("ImageGallery");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAutoPlaying, setIsAutoPlaying] = useState(autoSlide);
@@ -94,7 +96,7 @@ export default function ImageGallery({
               d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <p className="text-sm">이미지가 없습니다</p>
+          <p className="text-sm">{t("noImages")}</p>
         </div>
       </div>
     );
@@ -134,7 +136,7 @@ export default function ImageGallery({
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
-              크게 보기
+              {t("viewLarge")}
             </Button>
           </div>
 
@@ -156,6 +158,9 @@ export default function ImageGallery({
                   setIsAutoPlaying(!isAutoPlaying);
                 }}
                 className="bg-black/60 text-white hover:bg-black/80"
+                aria-label={
+                  isAutoPlaying ? t("pauseSlideshow") : t("playSlideshow")
+                }
               >
                 {isAutoPlaying ? (
                   <svg
@@ -193,6 +198,7 @@ export default function ImageGallery({
               size="icon"
               onClick={goToPrevious}
               className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label={t("previousImage")}
             >
               <svg
                 className="w-5 h-5"
@@ -214,6 +220,7 @@ export default function ImageGallery({
               size="icon"
               onClick={goToNext}
               className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label={t("nextImage")}
             >
               <svg
                 className="w-5 h-5"
@@ -245,7 +252,7 @@ export default function ImageGallery({
                     ? "bg-white scale-125"
                     : "bg-white/60 hover:bg-white/80"
                 )}
-                aria-label={`이미지 ${index + 1}번으로 이동`}
+                aria-label={t("goToImage", { number: index + 1 })}
               />
             ))}
           </div>
@@ -265,6 +272,7 @@ export default function ImageGallery({
                   ? "ring-2 ring-blue-500 scale-105"
                   : "hover:scale-105 opacity-80 hover:opacity-100"
               )}
+              aria-label={t("goToImage", { number: index + 1 })}
             >
               {/* 썸네일 placeholder */}
               <div className="w-full h-full flex items-center justify-center text-white text-xl">
@@ -307,6 +315,7 @@ export default function ImageGallery({
               size="icon"
               onClick={() => setIsModalOpen(false)}
               className="bg-black/60 text-white hover:bg-black/80"
+              aria-label={t("closeModal")}
             >
               <svg
                 className="w-5 h-5"
@@ -347,6 +356,7 @@ export default function ImageGallery({
                           ? "ring-2 ring-white"
                           : "opacity-60 hover:opacity-80"
                       )}
+                      aria-label={t("goToImage", { number: index + 1 })}
                     >
                       📷
                     </button>
@@ -364,6 +374,7 @@ export default function ImageGallery({
                 size="icon"
                 onClick={goToPrevious}
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 text-white hover:bg-black/80 w-12 h-12"
+                aria-label={t("previousImage")}
               >
                 <svg
                   className="w-6 h-6"
@@ -385,6 +396,7 @@ export default function ImageGallery({
                 size="icon"
                 onClick={goToNext}
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 text-white hover:bg-black/80 w-12 h-12"
+                aria-label={t("nextImage")}
               >
                 <svg
                   className="w-6 h-6"

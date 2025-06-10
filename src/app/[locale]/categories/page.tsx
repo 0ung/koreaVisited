@@ -135,55 +135,60 @@ const RegionChart = ({
   data,
 }: {
   data: CategoryStats["region_distribution"];
-}) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <span>📍</span>
-        지역별 분포
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-3">
-        {data.slice(0, 6).map((region, index) => (
-          <div
-            key={region.region}
-            className="flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white",
-                  index === 0
-                    ? "bg-blue-500"
-                    : index === 1
-                    ? "bg-green-500"
-                    : index === 2
-                    ? "bg-orange-500"
-                    : "bg-gray-500"
-                )}
-              >
-                {index + 1}
-              </div>
-              <span className="font-medium">{region.region}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-20 bg-gray-200 rounded-full h-2">
+}) => {
+  const t = useTranslations("Category");
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span>📍</span>
+          {t("regionDistribution")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {data.slice(0, 6).map((region, index) => (
+            <div
+              key={region.region}
+              className="flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
                 <div
-                  className="bg-blue-500 h-2 rounded-full transition-all"
-                  style={{ width: `${region.percentage}%` }}
-                />
+                  className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white",
+                    index === 0
+                      ? "bg-blue-500"
+                      : index === 1
+                      ? "bg-green-500"
+                      : index === 2
+                      ? "bg-orange-500"
+                      : "bg-gray-500"
+                  )}
+                >
+                  {index + 1}
+                </div>
+                <span className="font-medium">{region.region}</span>
               </div>
-              <span className="text-sm text-gray-600 min-w-[3rem]">
-                {region.count}개
-              </span>
+              <div className="flex items-center gap-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${region.percentage}%` }}
+                  />
+                </div>
+                <span className="text-sm text-gray-600 min-w-[3rem]">
+                  {region.count}
+                  {t("count")}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // 가격대 분포 컴포넌트
 const PriceDistribution = ({
@@ -191,6 +196,7 @@ const PriceDistribution = ({
 }: {
   data: CategoryStats["price_distribution"];
 }) => {
+  const t = useTranslations("Category");
   const total = data.level_1 + data.level_2 + data.level_3 + data.level_4;
 
   return (
@@ -198,16 +204,20 @@ const PriceDistribution = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span>💰</span>
-          가격대 분포
+          {t("priceDistribution")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {[
-            { level: "₩ 저렴", count: data.level_1, color: "bg-green-500" },
-            { level: "₩₩ 보통", count: data.level_2, color: "bg-blue-500" },
-            { level: "₩₩₩ 비쌈", count: data.level_3, color: "bg-orange-500" },
-            { level: "₩₩₩₩ 고급", count: data.level_4, color: "bg-purple-500" },
+            { level: t("cheap"), count: data.level_1, color: "bg-green-500" },
+            { level: t("normal"), count: data.level_2, color: "bg-blue-500" },
+            {
+              level: t("expensive"),
+              count: data.level_3,
+              color: "bg-orange-500",
+            },
+            { level: t("luxury"), count: data.level_4, color: "bg-purple-500" },
           ].map((item) => (
             <div key={item.level} className="flex items-center justify-between">
               <span className="font-medium">{item.level}</span>
@@ -224,7 +234,8 @@ const PriceDistribution = ({
                   />
                 </div>
                 <span className="text-sm text-gray-600 min-w-[3rem]">
-                  {item.count}개
+                  {item.count}
+                  {t("count")}
                 </span>
               </div>
             </div>
@@ -244,34 +255,38 @@ const SubCategoryFilter = ({
   subcategories: SubCategory[];
   selectedSubcategory: string;
   onSubcategoryChange: (subcategoryId: string) => void;
-}) => (
-  <div className="flex flex-wrap gap-2">
-    <Button
-      variant={selectedSubcategory === "all" ? "default" : "outline"}
-      size="sm"
-      onClick={() => onSubcategoryChange("all")}
-    >
-      전체
-    </Button>
-    {subcategories.map((subcat) => (
+}) => {
+  const t = useTranslations("Category");
+
+  return (
+    <div className="flex flex-wrap gap-2">
       <Button
-        key={subcat.id}
-        variant={selectedSubcategory === subcat.id ? "default" : "outline"}
+        variant={selectedSubcategory === "all" ? "default" : "outline"}
         size="sm"
-        onClick={() => onSubcategoryChange(subcat.id)}
-        className="flex items-center gap-2"
+        onClick={() => onSubcategoryChange("all")}
       >
-        <span>{subcat.icon}</span>
-        {subcat.name.ko}
-        <span className="text-xs">({subcat.place_count})</span>
+        {t("all")}
       </Button>
-    ))}
-  </div>
-);
+      {subcategories.map((subcat) => (
+        <Button
+          key={subcat.id}
+          variant={selectedSubcategory === subcat.id ? "default" : "outline"}
+          size="sm"
+          onClick={() => onSubcategoryChange(subcat.id)}
+          className="flex items-center gap-2"
+        >
+          <span>{subcat.icon}</span>
+          {subcat.name.ko}
+          <span className="text-xs">({subcat.place_count})</span>
+        </Button>
+      ))}
+    </div>
+  );
+};
 
 // 메인 카테고리 페이지 컴포넌트
 export default function CategoryPage() {
-  const t = useTranslations("CategoryPage");
+  const t = useTranslations("Category");
   const params = useParams();
   const router = useRouter();
   const locale = params.locale as string;
@@ -688,12 +703,10 @@ export default function CategoryPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            카테고리를 찾을 수 없습니다
+            {t("categoryNotFound")}
           </h2>
-          <p className="text-gray-600 mb-4">
-            요청하신 카테고리가 존재하지 않습니다.
-          </p>
-          <Button onClick={() => router.back()}>이전으로 돌아가기</Button>
+          <p className="text-gray-600 mb-4">{t("categoryNotExists")}</p>
+          <Button onClick={() => router.back()}>{t("goBack")}</Button>
         </div>
       </div>
     );
@@ -737,23 +750,25 @@ export default function CategoryPage() {
                 <div className="text-2xl font-bold">
                   {categoryStats.total_places.toLocaleString()}
                 </div>
-                <div className="text-sm text-white/80">총 장소</div>
+                <div className="text-sm text-white/80">{t("totalPlaces")}</div>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold">
                   ★ {categoryStats.avg_rating.toFixed(1)}
                 </div>
-                <div className="text-sm text-white/80">평균 평점</div>
+                <div className="text-sm text-white/80">{t("avgRating")}</div>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold">
                   {categoryStats.total_reviews.toLocaleString()}
                 </div>
-                <div className="text-sm text-white/80">총 리뷰</div>
+                <div className="text-sm text-white/80">{t("totalReviews")}</div>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold">3개</div>
-                <div className="text-sm text-white/80">플랫폼 통합</div>
+                <div className="text-2xl font-bold">3{t("count")}</div>
+                <div className="text-sm text-white/80">
+                  {t("platformIntegration")}
+                </div>
               </div>
             </div>
           </div>
@@ -764,11 +779,11 @@ export default function CategoryPage() {
         {/* 통계 카드 섹션 */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            카테고리 현황
+            {t("categoryStatus")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <CategoryStatCard
-              title="플랫폼 커버리지"
+              title={t("platformCoverage")}
               value={`${Math.round(
                 (categoryStats.platform_coverage.kakao +
                   categoryStats.platform_coverage.naver +
@@ -776,25 +791,27 @@ export default function CategoryPage() {
                   3
               )}%`}
               icon="📊"
-              description="3개 플랫폼 평균"
+              description={t("platformCoverageDesc")}
             />
             <CategoryStatCard
-              title="데이터 품질"
-              value="우수"
+              title={t("dataQuality")}
+              value={t("excellent")}
               icon="✅"
-              description="검증된 정보만 제공"
+              description={t("dataQualityDesc")}
             />
             <CategoryStatCard
-              title="최다 지역"
+              title={t("mostRegion")}
               value={categoryStats.region_distribution[0].region}
               icon="📍"
-              description={`${categoryStats.region_distribution[0].count}개 장소`}
+              description={`${categoryStats.region_distribution[0].count}${t(
+                "count"
+              )} ${t("places")}`}
             />
             <CategoryStatCard
-              title="업데이트"
-              value="실시간"
+              title={t("update")}
+              value={t("realtime")}
               icon="🔄"
-              description="지속적인 데이터 갱신"
+              description={t("realtimeDesc")}
             />
           </div>
 
@@ -810,11 +827,11 @@ export default function CategoryPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
               🏆 {categoryInfo.name[locale as keyof typeof categoryInfo.name]}{" "}
-              베스트
+              {t("best")}
             </h2>
             <Link href={`/search?category=${categoryId}`}>
               <Button variant="outline" size="sm">
-                전체 보기
+                {t("viewAll")}
               </Button>
             </Link>
           </div>
@@ -835,7 +852,7 @@ export default function CategoryPage() {
         {/* 트렌딩 키워드 섹션 */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            🔥 인기 검색 키워드
+            🔥 {t("trendingKeywords")}
           </h2>
           <Card>
             <CardContent className="p-6">
@@ -869,7 +886,7 @@ export default function CategoryPage() {
               {/* 서브카테고리 필터 */}
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-3">
-                  세부 카테고리
+                  {t("subcategory")}
                 </h3>
                 <SubCategoryFilter
                   subcategories={categoryInfo.subcategories}
@@ -882,7 +899,7 @@ export default function CategoryPage() {
               <div className="flex items-center gap-4">
                 {/* 정렬 */}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">정렬:</span>
+                  <span className="text-sm text-gray-600">{t("sortBy")}</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
@@ -948,9 +965,11 @@ export default function CategoryPage() {
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              전체 {categoryInfo.name[locale as keyof typeof categoryInfo.name]}
+              {t("total")}{" "}
+              {categoryInfo.name[locale as keyof typeof categoryInfo.name]}
               <span className="text-lg text-gray-500 ml-2">
-                ({filteredPlaces.length.toLocaleString()}개)
+                ({filteredPlaces.length.toLocaleString()}
+                {t("count")})
               </span>
             </h2>
           </div>
@@ -993,18 +1012,16 @@ export default function CategoryPage() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                조건에 맞는 장소가 없습니다
+                {t("noPlacesFound")}
               </h3>
-              <p className="text-gray-600 mb-6">
-                다른 서브카테고리나 정렬 옵션을 시도해보세요
-              </p>
+              <p className="text-gray-600 mb-6">{t("tryOtherFilters")}</p>
               <Button
                 onClick={() => {
                   setSelectedSubcategory("all");
                   setSortBy("recommendation");
                 }}
               >
-                필터 초기화
+                {t("resetFilters")}
               </Button>
             </div>
           )}
@@ -1015,9 +1032,9 @@ export default function CategoryPage() {
           <div className="text-center mt-12">
             <Link href={`/search?category=${categoryId}`}>
               <Button size="lg" className="min-w-[200px]">
-                더 많은{" "}
+                {t("viewMore")}{" "}
                 {categoryInfo.name[locale as keyof typeof categoryInfo.name]}{" "}
-                보기
+                {t("viewMorePlaces")}
               </Button>
             </Link>
           </div>
@@ -1027,27 +1044,27 @@ export default function CategoryPage() {
         <section className="mt-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white text-center">
           <h2 className="text-2xl font-bold mb-4">
             🎯 {categoryInfo.name[locale as keyof typeof categoryInfo.name]}{" "}
-            전문 추천
+            {t("specialRecommendation")}
           </h2>
           <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-            3개 플랫폼의 데이터를 종합 분석하여
-            {categoryInfo.name[locale as keyof typeof categoryInfo.name]} 분야의
-            숨겨진 명소부터 인기 장소까지 모두 찾아보세요
+            {t("recommendationDesc")}
+            {categoryInfo.name[locale as keyof typeof categoryInfo.name]}{" "}
+            {t("findAllPlaces")}
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href={`/search?category=${categoryId}&sort=rating`}>
               <Button className="bg-white text-blue-600 hover:bg-blue-50">
-                평점 높은 순
+                {t("highRatingOrder")}
               </Button>
             </Link>
             <Link href={`/search?category=${categoryId}&sort=recommendation`}>
               <Button className="bg-white text-blue-600 hover:bg-blue-50">
-                AI 추천순
+                {t("aiRecommendationOrder")}
               </Button>
             </Link>
             <Link href={`/search?category=${categoryId}&dataQuality=80`}>
               <Button className="bg-white text-blue-600 hover:bg-blue-50">
-                고품질 데이터만
+                {t("highQualityDataOnly")}
               </Button>
             </Link>
           </div>

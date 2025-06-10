@@ -17,7 +17,7 @@ export default function SearchEmptyState({
   suggestions = [],
   onSuggestionClick,
 }: SearchEmptyStateProps) {
-  const t = useTranslations("Search");
+  const t = useTranslations("SearchEmpty");
 
   return (
     <div className="text-center py-16">
@@ -45,22 +45,20 @@ export default function SearchEmptyState({
 
       {query ? (
         <p className="text-gray-600 mb-6 max-w-md mx-auto">
-          <span className="font-medium">"{query}"</span>에 대한 검색 결과를 찾을
-          수 없습니다.
+          <span className="font-medium">"{query}"</span>
+          {t("noResultsForQuery")}
           <br />
           {t("noResultsDescription")}
         </p>
       ) : (
-        <p className="text-gray-600 mb-6">
-          원하는 장소나 키워드를 검색해보세요.
-        </p>
+        <p className="text-gray-600 mb-6">{t("searchPlaceholder")}</p>
       )}
 
       {/* 추천 검색어 */}
       {suggestions.length > 0 && (
         <div className="mb-6">
           <p className="text-sm font-medium text-gray-700 mb-3">
-            이런 키워드는 어떠세요?
+            {t("suggestedKeywords")}
           </p>
           <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
             {suggestions.map((suggestion, index) => (
@@ -82,22 +80,22 @@ export default function SearchEmptyState({
       <div className="space-y-3">
         {query && onClearSearch && (
           <Button variant="outline" onClick={onClearSearch} className="mr-4">
-            검색어 지우기
+            {t("clearSearch")}
           </Button>
         )}
 
         <Button variant="default" onClick={() => window.history.back()}>
-          이전으로 돌아가기
+          {t("goBack")}
         </Button>
       </div>
 
       {/* 팁 */}
       <div className="mt-8 p-4 bg-blue-50 rounded-lg max-w-md mx-auto">
-        <h4 className="font-medium text-blue-900 mb-2">💡 검색 팁</h4>
+        <h4 className="font-medium text-blue-900 mb-2">💡 {t("searchTips")}</h4>
         <ul className="text-sm text-blue-800 space-y-1 text-left">
-          <li>• 지역명과 함께 검색해보세요 (예: "강남 카페")</li>
-          <li>• 더 간단한 키워드를 사용해보세요</li>
-          <li>• 카테고리 필터를 활용해보세요</li>
+          <li>• {t("tip1")}</li>
+          <li>• {t("tip2")}</li>
+          <li>• {t("tip3")}</li>
         </ul>
       </div>
     </div>

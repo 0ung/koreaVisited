@@ -30,20 +30,20 @@ const NotificationBell: React.FC = () => {
         // const response = await fetch('/api/notifications');
         // const data = await response.json();
 
-        // 임시 데이터
+        // 임시 데이터 (번역 처리)
         const mockNotifications: Notification[] = [
           {
             id: "1",
-            title: "새로운 추천 장소",
-            message: "서울 강남구에 새로운 맛집이 추가되었습니다.",
+            title: t("newRecommendationTitle"),
+            message: t("newRecommendationMessage"),
             type: "info",
             isRead: false,
             createdAt: new Date(),
           },
           {
             id: "2",
-            title: "북마크 알림",
-            message: "저장한 카페가 오늘 영업을 시작합니다.",
+            title: t("bookmarkNotificationTitle"),
+            message: t("bookmarkNotificationMessage"),
             type: "success",
             isRead: false,
             createdAt: new Date(Date.now() - 1000 * 60 * 30), // 30분 전
@@ -53,12 +53,12 @@ const NotificationBell: React.FC = () => {
         setNotifications(mockNotifications);
         setUnreadCount(mockNotifications.filter((n) => !n.isRead).length);
       } catch (error) {
-        console.error("알림 로드 실패:", error);
+        console.error(t("loadError"), error);
       }
     };
 
     fetchNotifications();
-  }, []);
+  }, [t]);
 
   // 외부 클릭 감지
   useEffect(() => {
@@ -86,7 +86,7 @@ const NotificationBell: React.FC = () => {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      console.error("알림 읽음 처리 실패:", error);
+      console.error(t("markReadError"), error);
     }
   };
 
@@ -97,7 +97,7 @@ const NotificationBell: React.FC = () => {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error("전체 읽음 처리 실패:", error);
+      console.error(t("markAllReadError"), error);
     }
   };
 
@@ -198,7 +198,7 @@ const NotificationBell: React.FC = () => {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M15 17h5l-5 5v-5zM11 1H5a2 2 0 00-2 2v14a2 2 0 002 2h8M10 9a5 5 0 015 5M4 12h2l1 1v1"
+            d="M15 17h5l-5 5v-5zM11 1H5a2 2 0 00-2 2v14a2 2 0 002 2h8M10 9a5 5 0 115 5M4 12h2l1 1v1"
           />
         </svg>
 
@@ -244,7 +244,7 @@ const NotificationBell: React.FC = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={1}
-                    d="M15 17h5l-5 5v-5zM11 1H5a2 2 0 00-2 2v14a2 2 0 002 2h8M10 9a5 5 0 015 5M4 12h2l1 1v1"
+                    d="M15 17h5l-5 5v-5zM11 1H5a2 2 0 00-2 2v14a2 2 0 002 2h8M10 9a5 5 0 115 5M4 12h2l1 1v1"
                   />
                 </svg>
                 <p className="text-gray-500 text-sm">{t("noNotifications")}</p>

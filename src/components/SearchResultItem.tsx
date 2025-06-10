@@ -73,9 +73,9 @@ export default function SearchResultItem({
 
   // 혼잡도 텍스트
   const getCrowdText = (crowdIndex: number) => {
-    if (crowdIndex <= 30) return "여유";
-    if (crowdIndex <= 70) return "보통";
-    return "혼잡";
+    if (crowdIndex <= 30) return t("crowdLow");
+    if (crowdIndex <= 70) return t("crowdMedium");
+    return t("crowdHigh");
   };
 
   // 가격대 표시
@@ -87,15 +87,15 @@ export default function SearchResultItem({
   // 카테고리 한글명
   const getCategoryName = (category: string) => {
     const categoryMap: Record<string, string> = {
-      restaurants: "맛집",
-      cafes: "카페",
-      attractions: "관광지",
-      hotels: "숙박",
-      shopping: "쇼핑",
-      nightlife: "유흥",
-      culture: "문화",
-      nature: "자연",
-      sports: "스포츠",
+      restaurants: t("categoryRestaurants"),
+      cafes: t("categoryCafes"),
+      attractions: t("categoryAttractions"),
+      hotels: t("categoryHotels"),
+      shopping: t("categoryShopping"),
+      nightlife: t("categoryNightlife"),
+      culture: t("categoryCulture"),
+      nature: t("categoryNature"),
+      sports: t("categorySports"),
     };
     return categoryMap[category] || category;
   };
@@ -110,7 +110,7 @@ export default function SearchResultItem({
             <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
               {place.isOpen && (
                 <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                  영업중
+                  {t("openNow")}
                 </span>
               )}
               <span className="px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
@@ -128,6 +128,7 @@ export default function SearchResultItem({
                   onToggleSave(place.id);
                 }}
                 className="w-8 h-8 bg-white/90 hover:bg-white"
+                aria-label={isSaved ? t("removeSave") : t("addSave")}
               >
                 <svg
                   className={cn(
@@ -207,7 +208,7 @@ export default function SearchResultItem({
                 </svg>
                 {place.distance
                   ? `${Math.round(place.distance)}m`
-                  : "거리 정보 없음"}
+                  : t("noDistanceInfo")}
               </div>
               {place.priceLevel && (
                 <span className="text-green-600 font-medium">
@@ -242,7 +243,7 @@ export default function SearchResultItem({
               onClick={() => onGetDirections?.(place)}
               className="flex-1 text-xs"
             >
-              길찾기
+              {t("getDirections")}
             </Button>
             <Button
               variant="default"
@@ -250,7 +251,7 @@ export default function SearchResultItem({
               asChild
               className="flex-1 text-xs"
             >
-              <Link href={`/places/${place.id}`}>상세보기</Link>
+              <Link href={`/places/${place.id}`}>{t("viewDetails")}</Link>
             </Button>
           </div>
         </CardContent>
@@ -269,7 +270,7 @@ export default function SearchResultItem({
             <div className="absolute top-2 left-2 z-10">
               {place.isOpen && (
                 <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                  영업중
+                  {t("openNow")}
                 </span>
               )}
             </div>
@@ -284,6 +285,7 @@ export default function SearchResultItem({
                   onToggleSave(place.id);
                 }}
                 className="w-8 h-8 bg-white/80 hover:bg-white"
+                aria-label={isSaved ? t("removeSave") : t("addSave")}
               >
                 <svg
                   className={cn(
@@ -369,7 +371,7 @@ export default function SearchResultItem({
                 </svg>
                 {place.distance
                   ? `${Math.round(place.distance)}m`
-                  : "거리 정보 없음"}
+                  : t("noDistanceInfo")}
               </div>
 
               {place.crowd_index && (
@@ -406,10 +408,10 @@ export default function SearchResultItem({
                 size="sm"
                 onClick={() => onGetDirections?.(place)}
               >
-                길찾기
+                {t("getDirections")}
               </Button>
               <Button variant="default" size="sm" asChild>
-                <Link href={`/places/${place.id}`}>상세보기</Link>
+                <Link href={`/places/${place.id}`}>{t("viewDetails")}</Link>
               </Button>
             </div>
           </div>

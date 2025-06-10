@@ -1,4 +1,4 @@
-// src/components/PlaceCard.tsx - 기존 코드 확장 및 최적화
+// src/components/PlaceCard.tsx - 번역 처리된 버전
 "use client";
 
 import { useState, useMemo, useCallback, memo, useRef } from "react";
@@ -63,19 +63,21 @@ const useImageError = (imageUrls: string[]) => {
   };
 };
 
-// 플랫폼 데이터 표시 컴포넌트 (기존 코드 활용)
+// 플랫폼 데이터 표시 컴포넌트
 const PlatformIndicator = memo(
   ({ platformData }: { platformData: Place["platform_data"] }) => {
+    const t = useTranslations("PlaceCard");
+
     const platforms = useMemo(() => {
       const result = [];
       if (platformData.kakao?.available)
-        result.push({ name: "카카오", color: "bg-yellow-500" });
+        result.push({ name: t("kakao"), color: "bg-yellow-500" });
       if (platformData.naver?.available)
-        result.push({ name: "네이버", color: "bg-green-500" });
+        result.push({ name: t("naver"), color: "bg-green-500" });
       if (platformData.google?.available)
-        result.push({ name: "구글", color: "bg-blue-500" });
+        result.push({ name: t("google"), color: "bg-blue-500" });
       return result;
-    }, [platformData]);
+    }, [platformData, t]);
 
     return (
       <div className="flex items-center gap-1">
@@ -87,26 +89,30 @@ const PlatformIndicator = memo(
           />
         ))}
         <span className="text-xs text-gray-500 ml-1">
-          {platforms.length}개 플랫폼
+          {t("platformCount", { count: platforms.length })}
         </span>
       </div>
     );
   }
 );
 
-// 혼잡도 표시 컴포넌트 (새로 추가)
+PlatformIndicator.displayName = "PlatformIndicator";
+
+// 혼잡도 표시 컴포넌트
 const CrowdIndicator = memo(({ crowdIndex }: { crowdIndex?: number }) => {
+  const t = useTranslations("PlaceCard");
+
   if (!crowdIndex) return null;
 
   const { level, color, emoji } = useMemo(() => {
     if (crowdIndex >= 80)
-      return { level: "매우 혼잡", color: "text-red-600", emoji: "🔴" };
+      return { level: t("crowdVeryBusy"), color: "text-red-600", emoji: "🔴" };
     if (crowdIndex >= 60)
-      return { level: "혼잡", color: "text-orange-600", emoji: "🟠" };
+      return { level: t("crowdBusy"), color: "text-orange-600", emoji: "🟠" };
     if (crowdIndex >= 40)
-      return { level: "보통", color: "text-yellow-600", emoji: "🟡" };
-    return { level: "여유", color: "text-green-600", emoji: "🟢" };
-  }, [crowdIndex]);
+      return { level: t("crowdNormal"), color: "text-yellow-600", emoji: "🟡" };
+    return { level: t("crowdEmpty"), color: "text-green-600", emoji: "🟢" };
+  }, [crowdIndex, t]);
 
   return (
     <div className="flex items-center gap-1">
@@ -116,17 +122,30 @@ const CrowdIndicator = memo(({ crowdIndex }: { crowdIndex?: number }) => {
   );
 });
 
-// 데이터 품질 배지 (기존 코드 확장)
+CrowdIndicator.displayName = "CrowdIndicator";
+
+// 데이터 품질 배지
 const QualityBadge = memo(({ score }: { score: number }) => {
+  const t = useTranslations("PlaceCard");
+
   if (score < 70) return null;
 
   const { label, bgColor } = useMemo(() => {
     if (score >= 90)
-      return { label: "검증됨", bgColor: "bg-green-100 text-green-800" };
+      return {
+        label: t("qualityVerified"),
+        bgColor: "bg-green-100 text-green-800",
+      };
     if (score >= 80)
-      return { label: "우수", bgColor: "bg-blue-100 text-blue-800" };
-    return { label: "양호", bgColor: "bg-yellow-100 text-yellow-800" };
-  }, [score]);
+      return {
+        label: t("qualityExcellent"),
+        bgColor: "bg-blue-100 text-blue-800",
+      };
+    return {
+      label: t("qualityGood"),
+      bgColor: "bg-yellow-100 text-yellow-800",
+    };
+  }, [score, t]);
 
   return (
     <span className={cn("px-2 py-1 rounded-full text-xs font-medium", bgColor)}>
@@ -135,7 +154,9 @@ const QualityBadge = memo(({ score }: { score: number }) => {
   );
 });
 
-// 메인 PlaceCard 컴포넌트 (기존 구조 유지, 성능 최적화)
+QualityBadge.displayName = "QualityBadge";
+
+// 메인 PlaceCard 컴포넌트
 const PlaceCard = memo<PlaceCardProps>(
   ({
     place,
@@ -214,7 +235,7 @@ const PlaceCard = memo<PlaceCardProps>(
                   ? "bg-red-500 text-white"
                   : "bg-white/80 text-gray-400 hover:text-red-500"
               )}
-              aria-label={isBookmarked ? "북마크 제거" : "북마크 추가"}
+              aria-label={isBookmarked ? t("removeBookmark") : t("addBookmark")}
             >
               {isBookmarked ? "❤️" : "🤍"}
             </button>
@@ -222,7 +243,7 @@ const PlaceCard = memo<PlaceCardProps>(
             {/* 추천 점수 배지 */}
             {showRecommendationScore && place.recommendation_score >= 8 && (
               <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                추천
+                {t("recommended")}
               </div>
             )}
           </div>
@@ -251,7 +272,7 @@ const PlaceCard = memo<PlaceCardProps>(
                 </span>
               </div>
               <span className="text-sm text-gray-500">
-                리뷰 {place.review_count.toLocaleString()}개
+                {t("reviewCount", { count: place.review_count })}
               </span>
             </div>
 

@@ -117,7 +117,7 @@ const HeroSection = ({ onSearch }: { onSearch: (query: string) => void }) => {
 
         {/* 검색 바 */}
         <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
-          <div className="flex items-center bg-white rounded-full p-2 shadow-lg">
+          <div className="flex items-center justify-between bg-white rounded-full p-2 shadow-lg">
             <Input
               type="text"
               placeholder={
@@ -125,9 +125,13 @@ const HeroSection = ({ onSearch }: { onSearch: (query: string) => void }) => {
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 border-0 bg-transparent text-gray-900 text-lg"
+              className="flex-1 mr-3 border-0 bg-transparent text-gray-900 text-lg"
             />
-            <Button type="submit" className="rounded-full px-8">
+
+            <Button
+              type="submit"
+              className="shrink-0 w-[15%] min-w-[80px] rounded-full px-4"
+            >
               {homeT("searchButton") || commonT("search") || "검색"}
             </Button>
           </div>

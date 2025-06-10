@@ -1,7 +1,8 @@
-// src/components/MapView.tsx - 기존 코드 확장
+// src/components/MapView.tsx - 번역 처리된 버전
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/utils/cn";
 
 // 기존 타입 확장
@@ -36,7 +37,7 @@ interface MapViewProps {
   center?: { lat: number; lng: number };
   showClusters?: boolean;
   showTraffic?: boolean;
-  showCrowdData?: boolean; // 새로 추가
+  showCrowdData?: boolean;
   className?: string;
 }
 
@@ -98,7 +99,7 @@ const clusterMarkers = (places: Place[], zoom: number): MapMarker[] => {
   return markers;
 };
 
-// 혼잡도 오버레이 컴포넌트 (새로 추가)
+// 혼잡도 오버레이 컴포넌트
 const CrowdOverlay = memo(({ places }: { places: Place[] }) => {
   const crowdHeatmapData = useMemo(() => {
     return places
@@ -146,7 +147,7 @@ const CrowdOverlay = memo(({ places }: { places: Place[] }) => {
 
 CrowdOverlay.displayName = "CrowdOverlay";
 
-// 마커 컴포넌트 확장 (혼잡도 표시 추가)
+// 마커 컴포넌트 확장
 const MapMarker = memo(
   ({
     marker,
@@ -159,6 +160,8 @@ const MapMarker = memo(
     onClick: () => void;
     showCrowdData?: boolean;
   }) => {
+    const t = useTranslations("MapView");
+
     const getCategoryColor = (category: string) => {
       const colors = {
         restaurant: "bg-red-500",
@@ -195,7 +198,9 @@ const MapMarker = memo(
             getCrowdBorderColor(marker.place.crowd_index)
           )}
           style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
-          title={`${marker.clusterCount}개 장소`}
+          title={t("clusterTooltip", {
+            count: marker.clusterCount === undefined ? 0 : marker.clusterCount,
+          })}
         >
           {marker.clusterCount}
         </button>
@@ -256,11 +261,20 @@ const MapMarker = memo(
 
 MapMarker.displayName = "MapMarker";
 
-// 기존 PlacePopup 컴포넌트 (그대로 유지)
+// PlacePopup 컴포넌트
 const PlacePopup = memo(
   ({ place, onClose }: { place: Place; onClose: () => void }) => {
+    const t = useTranslations("MapView");
+
     const getPlatformCount = (platformData: Place["platform_data"]) => {
       return Object.values(platformData).filter((p) => p?.available).length;
+    };
+
+    const getCrowdStatus = (crowdIndex?: number) => {
+      if (crowdIndex === undefined) return "";
+      if (crowdIndex <= 30) return t("crowdLow");
+      if (crowdIndex <= 70) return t("crowdMedium");
+      return t("crowdHigh");
     };
 
     return (
@@ -309,7 +323,9 @@ const PlacePopup = memo(
             <div className="flex items-center gap-1">
               <span className="text-blue-600">📊</span>
               <span className="text-sm">
-                {getPlatformCount(place.platform_data)}개 플랫폼
+                {t("platformCount", {
+                  count: getPlatformCount(place.platform_data),
+                })}
               </span>
             </div>
           </div>
@@ -317,7 +333,7 @@ const PlacePopup = memo(
           {place.crowd_index !== undefined && (
             <div className="mb-3">
               <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600">실시간 혼잡도</span>
+                <span className="text-gray-600">{t("realtimeCrowd")}</span>
                 <span
                   className={cn(
                     "font-medium",
@@ -328,11 +344,7 @@ const PlacePopup = memo(
                       : "text-red-600"
                   )}
                 >
-                  {place.crowd_index <= 30
-                    ? "여유"
-                    : place.crowd_index <= 70
-                    ? "보통"
-                    : "혼잡"}
+                  {getCrowdStatus(place.crowd_index)}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -361,7 +373,7 @@ const PlacePopup = memo(
               }
               className="flex-1 bg-yellow-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-yellow-600 transition-colors"
             >
-              카카오맵
+              {t("kakaoMap")}
             </button>
             <button
               onClick={() =>
@@ -372,13 +384,13 @@ const PlacePopup = memo(
               }
               className="flex-1 bg-green-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-green-600 transition-colors"
             >
-              네이버지도
+              {t("naverMap")}
             </button>
             <button
               onClick={() => window.open(`/places/${place.id}`, "_blank")}
               className="flex-1 bg-blue-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-600 transition-colors"
             >
-              상세보기
+              {t("viewDetails")}
             </button>
           </div>
         </div>
@@ -389,7 +401,7 @@ const PlacePopup = memo(
 
 PlacePopup.displayName = "PlacePopup";
 
-// 메인 MapView 컴포넌트 확장
+// 메인 MapView 컴포넌트
 const MapView = memo<MapViewProps>(
   ({
     places,
@@ -399,9 +411,10 @@ const MapView = memo<MapViewProps>(
     center = { lat: 37.5665, lng: 126.978 },
     showClusters = true,
     showTraffic = false,
-    showCrowdData = false, // 새로 추가된 props
+    showCrowdData = false,
     className,
   }) => {
+    const t = useTranslations("MapView");
     const [selectedMarker, setSelectedMarker] = useState<Place | null>(null);
     const [mapZoom, setMapZoom] = useState(zoom);
 
@@ -453,28 +466,28 @@ const MapView = memo<MapViewProps>(
             <rect width="100" height="100" fill="url(#roads)" />
           </svg>
 
-          {/* 기존 지역 표시 */}
+          {/* 지역 표시 */}
           <div className="absolute top-4 left-4 bg-white/80 rounded px-2 py-1 text-xs font-medium">
-            서울특별시
+            {t("seoulCity")}
           </div>
           <div className="absolute top-1/4 right-1/4 bg-white/60 rounded px-2 py-1 text-xs">
-            강남구
+            {t("gangnamGu")}
           </div>
           <div className="absolute bottom-1/3 left-1/3 bg-white/60 rounded px-2 py-1 text-xs">
-            중구
+            {t("jungGu")}
           </div>
           <div className="absolute top-1/3 left-1/4 bg-white/60 rounded px-2 py-1 text-xs">
-            마포구
+            {t("mapoGu")}
           </div>
 
           {/* 한강 */}
           <div className="absolute top-1/2 left-0 right-0 h-3 bg-blue-300/40 transform -translate-y-1/2 -rotate-12"></div>
         </div>
 
-        {/* 혼잡도 오버레이 (새로 추가) */}
+        {/* 혼잡도 오버레이 */}
         {showCrowdData && <CrowdOverlay places={places} />}
 
-        {/* 마커들 (showCrowdData props 추가) */}
+        {/* 마커들 */}
         {markers.map((marker, index) => (
           <MapMarker
             key={`marker-${marker.place.id}-${index}`}
@@ -485,12 +498,12 @@ const MapView = memo<MapViewProps>(
           />
         ))}
 
-        {/* 기존 줌 컨트롤 */}
+        {/* 줌 컨트롤 */}
         <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg overflow-hidden z-10">
           <button
             onClick={handleZoomIn}
             className="block w-10 h-10 flex items-center justify-center hover:bg-gray-50 border-b"
-            title="확대"
+            title={t("zoomIn")}
           >
             <svg
               className="w-4 h-4"
@@ -509,7 +522,7 @@ const MapView = memo<MapViewProps>(
           <button
             onClick={handleZoomOut}
             className="block w-10 h-10 flex items-center justify-center hover:bg-gray-50"
-            title="축소"
+            title={t("zoomOut")}
           >
             <svg
               className="w-4 h-4"
@@ -527,53 +540,53 @@ const MapView = memo<MapViewProps>(
           </button>
         </div>
 
-        {/* 확장된 범례 (혼잡도 추가) */}
+        {/* 범례 */}
         <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 z-10">
-          <h4 className="text-xs font-semibold mb-2">범례</h4>
+          <h4 className="text-xs font-semibold mb-2">{t("legend")}</h4>
           <div className="space-y-2">
             {/* 카테고리 */}
             <div>
               <div className="text-xs font-medium text-gray-700 mb-1">
-                카테고리
+                {t("categories")}
               </div>
               <div className="grid grid-cols-2 gap-1 text-xs">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span>맛집</span>
+                  <span>{t("restaurant")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-                  <span>카페</span>
+                  <span>{t("cafe")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span>관광</span>
+                  <span>{t("tourist")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span>자연</span>
+                  <span>{t("nature")}</span>
                 </div>
               </div>
             </div>
 
-            {/* 혼잡도 범례 (조건부 표시) */}
+            {/* 혼잡도 범례 */}
             {showCrowdData && (
               <div className="border-t pt-2">
                 <div className="text-xs font-medium text-gray-700 mb-1">
-                  혼잡도
+                  {t("crowdLevel")}
                 </div>
                 <div className="space-y-1 text-xs">
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                    <span>여유</span>
+                    <span>{t("crowdLow")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                    <span>보통</span>
+                    <span>{t("crowdMedium")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                    <span>혼잡</span>
+                    <span>{t("crowdHigh")}</span>
                   </div>
                 </div>
               </div>
@@ -581,23 +594,25 @@ const MapView = memo<MapViewProps>(
           </div>
         </div>
 
-        {/* 기존 통계 정보 */}
+        {/* 통계 정보 */}
         <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 z-10">
           <div className="text-sm">
             <div className="font-semibold text-gray-900 mb-1">
-              총 {places.length.toLocaleString()}개 장소
+              {t("totalPlaces", { count: places.length })}
             </div>
             <div className="text-gray-600 text-xs">
-              줌 레벨: {mapZoom} |
+              {t("zoomLevel", { level: mapZoom })} |
               {showClusters
-                ? ` 클러스터: ${markers.filter((m) => m.cluster).length}개`
-                : " 개별 마커"}
-              {showCrowdData && <span> | 혼잡도 표시: ON</span>}
+                ? t("clustersCount", {
+                    count: markers.filter((m) => m.cluster).length,
+                  })
+                : t("individualMarkers")}
+              {showCrowdData && <span> | {t("crowdDisplayOn")}</span>}
             </div>
           </div>
         </div>
 
-        {/* 기존 선택된 장소 팝업 */}
+        {/* 선택된 장소 팝업 */}
         {selectedMarker && (
           <PlacePopup
             place={selectedMarker}
@@ -605,7 +620,7 @@ const MapView = memo<MapViewProps>(
           />
         )}
 
-        {/* 기존 로딩 오버레이 */}
+        {/* 로딩 오버레이 */}
         {places.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 z-20">
             <div className="text-center">
@@ -625,11 +640,9 @@ const MapView = memo<MapViewProps>(
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                표시할 장소가 없습니다
+                {t("noPlacesToShow")}
               </h3>
-              <p className="text-gray-600">
-                검색 조건을 변경하거나 필터를 조정해보세요
-              </p>
+              <p className="text-gray-600">{t("noPlacesDesc")}</p>
             </div>
           </div>
         )}
