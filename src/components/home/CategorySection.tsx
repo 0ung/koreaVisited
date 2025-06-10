@@ -7,14 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useCachedFetch } from "@/utils/cache";
-
-interface CategoryStats {
-  category: string;
-  count: number;
-  avg_rating: number;
-  icon: string;
-  color: string;
-}
+import type { CategoryStats } from "@/types";
 
 // 스켈레톤 컴포넌트
 const CategoryCardSkeleton = () => (
