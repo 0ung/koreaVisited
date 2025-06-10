@@ -8,10 +8,12 @@ import { Link } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { cn } from "@/utils/cn";
 
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import PlaceCardSkeleton from "@/components/common/PlaceCardSkeleton";
+import SearchHeader from "./components/SearchHeader";
+import FiltersSidebar from "./components/FiltersSidebar";
+import ResultsSection from "./components/ResultsSection";
+import type { Place, SearchFilters } from "@/types";
 import { storage } from "@/utils/storage";
 
 /* ────────────────────── 동적 컴포넌트 ────────────────────── */
@@ -25,54 +27,7 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 });
 
 /* ────────────────────── 타입 ────────────────────── */
-interface Place {
-  id: string;
-  name: { ko: string; en: string; ja: string };
-  address: { ko: string; en: string; ja: string };
-  lat: number;
-  lon: number;
-  category_std: string;
-  rating_avg: number;
-  review_count: number;
-  main_image_urls: string[];
-  recommendation_score: number;
-  crowd_index?: number;
-  distance?: number;
-  price_level?: number;
-  platform_data: {
-    kakao?: { available: boolean; rating: number; review_count: number };
-    naver?: { available: boolean; rating: number; review_count: number };
-    google?: { available: boolean; rating: number; review_count: number };
-  };
-  data_quality_score: number;
-  last_updated: string;
-}
-interface SearchFilters {
-  category: string;
-  location: string;
-  rating: number;
-  priceLevel: string;
-  distance: string;
-  openNow: boolean;
-  dataQuality: number;
-  platformCount: number;
-  crowdLevel: string;
-}
 
-/* ────────────────────── 스켈레톤 ────────────────────── */
-const PlaceCardSkeleton = () => (
-  <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-    <Skeleton variant="rectangular" className="w-full h-48" />
-    <div className="p-4 space-y-3">
-      <Skeleton variant="text" className="h-6 w-3/4" />
-      <Skeleton variant="text" className="h-4 w-full" />
-      <div className="flex justify-between items-center">
-        <Skeleton variant="text" className="h-4 w-20" />
-        <Skeleton variant="text" className="h-4 w-16" />
-      </div>
-    </div>
-  </div>
-);
 
 const MapViewSkeleton = () => {
   const t = useTranslations("Search");
@@ -252,174 +207,34 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6">
-        {/* ─── 검색 헤더 ─── */}
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex-1">
-              <Input
-                type="text"
-                placeholder={t("searchPlaceholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full"
-              />
+          <SearchHeader
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            quickCategories={quickCategories}
+            currentCategory={filters.category}
+            setCategory={(cat) =>
+              setFilters((prev) => ({ ...prev, category: cat }))
+            }
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            t={t}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-1">
+              <FiltersSidebar filters={filters} setFilters={setFilters} t={t} />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setViewMode(viewMode === "list" ? "map" : "list")}
-            >
-              {viewMode === "list" ? t("mapButton") : t("listButton")}
-            </Button>
+            <ResultsSection
+              isLoading={isLoading}
+              viewMode={viewMode}
+              filteredPlaces={filteredPlaces}
+              containerRef={containerRef}
+              visibleItems={visibleItems}
+              totalHeight={totalHeight}
+              offsetY={offsetY}
+              onBookmarkToggle={handleBookmarkToggle}
+            />
           </div>
-
-          {/* 빠른 카테고리 */}
-          <div className="flex flex-wrap gap-2">
-            {quickCategories.map(({ category, label }) => (
-              <Button
-                key={category}
-                variant={filters.category === category ? "default" : "outline"}
-                size="sm"
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    category: prev.category === category ? "" : category,
-                  }))
-                }
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* ─── 레이아웃 ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* 사이드 필터 */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-4">{t("filterTitle")}</h3>
-
-                {/* 최소 평점 */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">
-                    {t("labelMinRating")}
-                  </label>
-                  <select
-                    value={filters.rating}
-                    onChange={(e) =>
-                      setFilters((p) => ({
-                        ...p,
-                        rating: Number(e.target.value),
-                      }))
-                    }
-                    className="w-full p-2 border rounded-md"
-                  >
-                    <option value={0}>{t("optionAll")}</option>
-                    <option value={4}>{t("optionRating4")}</option>
-                    <option value={4.5}>{t("optionRating45")}</option>
-                  </select>
-                </div>
-
-                {/* 데이터 품질 */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">
-                    {t("labelDataQuality")}
-                  </label>
-                  <select
-                    value={filters.dataQuality}
-                    onChange={(e) =>
-                      setFilters((p) => ({
-                        ...p,
-                        dataQuality: Number(e.target.value),
-                      }))
-                    }
-                    className="w-full p-2 border rounded-md"
-                  >
-                    <option value={70}>{t("optionQuality70")}</option>
-                    <option value={80}>{t("optionQuality80")}</option>
-                    <option value={90}>{t("optionQuality90")}</option>
-                  </select>
-                </div>
-
-                {/* 혼잡도 */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">
-                    {t("labelCrowdLevel")}
-                  </label>
-                  <select
-                    value={filters.crowdLevel}
-                    onChange={(e) =>
-                      setFilters((p) => ({ ...p, crowdLevel: e.target.value }))
-                    }
-                    className="w-full p-2 border rounded-md"
-                  >
-                    <option value="">{t("optionAll")}</option>
-                    <option value="low">{t("optionCrowdLow")}</option>
-                    <option value="medium">{t("optionCrowdMedium")}</option>
-                    <option value="high">{t("optionCrowdHigh")}</option>
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 결과 영역 */}
-          <div className="lg:col-span-3">
-            {/* 결과 개수 */}
-            <p className="text-gray-600 mb-4">
-              {t("resultPrefix")} {filteredPlaces.length.toLocaleString()}{" "}
-              {t("resultSuffix")}
-            </p>
-
-            {isLoading ? (
-              /* 스켈레톤 */
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <PlaceCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : viewMode === "map" ? (
-              /* 지도 보기 */
-              <div className="h-[600px]">
-                <MapView places={filteredPlaces} />
-              </div>
-            ) : (
-              /* 목록 보기 + 가상 스크롤 */
-              <div
-                ref={containerRef}
-                className="h-[800px] overflow-auto"
-                style={{ height: 800 }}
-              >
-                <div style={{ height: totalHeight, position: "relative" }}>
-                  <div
-                    style={{
-                      transform: `translateY(${offsetY}px)`,
-                      position: "absolute",
-                      inset: 0,
-                    }}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {visibleItems.map((p, idx) => (
-                        <PlaceCard
-                          key={p.id}
-                          place={p}
-                          locale="ko"
-                          showRecommendationScore
-                          showPlatformIndicator
-                          showDataQuality
-                          showCrowdStatus
-                          onBookmarkToggle={handleBookmarkToggle}
-                          priority={idx < 3}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

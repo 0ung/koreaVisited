@@ -2,10 +2,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
-
-interface CategoryInfo {
-  name: { ko: string; en: string; ja: string };
-}
+import type { CategoryInfo } from "@/types";
 
 interface CategoryRecommendationSectionProps {
   categoryInfo: CategoryInfo;

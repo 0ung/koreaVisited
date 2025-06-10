@@ -8,32 +8,7 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { cn } from "@/utils/cn";
-
-interface Place {
-  id: string;
-  name: {
-    ko: string;
-    en: string;
-    ja: string;
-  };
-  address: {
-    ko: string;
-    en: string;
-    ja: string;
-  };
-  lat: number;
-  lon: number;
-  category_std: string;
-  rating_avg: number;
-  review_count: number;
-  main_image_urls: string[];
-  recommendation_score: number;
-  distance?: number;
-  isOpen?: boolean;
-  priceLevel?: number;
-  tags: string[];
-  crowd_index?: number;
-}
+import type { Place } from "@/types";
 
 interface SearchResultItemProps {
   place: Place;

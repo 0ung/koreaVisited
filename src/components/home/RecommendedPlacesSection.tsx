@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useImagePreload } from "@/utils/performance";
 import { useCachedFetch, memoryCache } from "@/utils/cache";
+import type { Place } from "@/types";
+import PlaceCardSkeleton from "@/components/common/PlaceCardSkeleton";
 
 // 동적 임포트
 const PlaceCard = dynamic(() => import("@/components/PlaceCard"), {
@@ -16,57 +18,7 @@ const PlaceCard = dynamic(() => import("@/components/PlaceCard"), {
   ssr: false,
 });
 
-// 타입 정의
-interface Place {
-  id: string;
-  name: { ko: string; en: string; ja: string };
-  address: { ko: string; en: string; ja: string };
-  lat: number;
-  lon: number;
-  category_std: string;
-  rating_avg: number;
-  review_count: number;
-  main_image_urls: string[];
-  recommendation_score: number;
-  crowd_index?: number;
-  platform_data: {
-    kakao?: { available: boolean; rating: number; review_count: number };
-    naver?: { available: boolean; rating: number; review_count: number };
-    google?: { available: boolean; rating: number; review_count: number };
-  };
-  data_quality_score: number;
-  last_updated: string;
-}
 
-// 스켈레톤 컴포넌트
-const PlaceCardSkeleton = () => (
-  <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300">
-    <Skeleton
-      variant="rectangular"
-      className="w-full h-48 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse"
-    />
-    <div className="p-6 space-y-4">
-      <Skeleton
-        variant="text"
-        className="h-6 w-3/4 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full"
-      />
-      <Skeleton
-        variant="text"
-        className="h-4 w-full bg-gradient-to-r from-gray-100 to-gray-200 rounded-full"
-      />
-      <div className="flex justify-between items-center">
-        <Skeleton
-          variant="text"
-          className="h-4 w-20 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full"
-        />
-        <Skeleton
-          variant="text"
-          className="h-4 w-16 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full"
-        />
-      </div>
-    </div>
-  </div>
-);
 
 export function RecommendedPlacesSection() {
   const homeT = useTranslations("Home");

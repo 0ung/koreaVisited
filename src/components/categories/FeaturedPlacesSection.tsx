@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/Button";
+import type { Place, CategoryInfo } from "@/types";
 
 // 동적 임포트
 const PlaceCard = dynamic(() => import("@/components/PlaceCard"), {
@@ -10,33 +11,6 @@ const PlaceCard = dynamic(() => import("@/components/PlaceCard"), {
   ssr: false,
 });
 
-interface Place {
-  id: string;
-  name: { ko: string; en: string; ja: string };
-  address: { ko: string; en: string; ja: string };
-  lat: number;
-  lon: number;
-  category_std: string;
-  rating_avg: number;
-  review_count: number;
-  main_image_urls: string[];
-  recommendation_score: number;
-  crowd_index?: number;
-  distance?: number;
-  price_level?: number;
-  platform_data: {
-    kakao?: { available: boolean; rating: number; review_count: number };
-    naver?: { available: boolean; rating: number; review_count: number };
-    google?: { available: boolean; rating: number; review_count: number };
-  };
-  data_quality_score: number;
-  last_updated: string;
-}
-
-interface CategoryInfo {
-  id: string;
-  name: { ko: string; en: string; ja: string };
-}
 
 interface FeaturedPlacesSectionProps {
   categoryInfo: CategoryInfo;
